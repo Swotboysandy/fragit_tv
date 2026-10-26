@@ -23,3 +23,4 @@ com.android.printspooler
 com.android.gallery3d
 com.android.wallpaper.livepicker
 com.android.dreams.basic
+com.google.android.partnersetup            # Google Partner Setup: RLZ partner-attribution pings (privacy-check, 27 Oct)
