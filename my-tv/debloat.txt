@@ -1,0 +1,25 @@
+# My TV: TCL UnionTV / iFFALCON 32F2A, Android TV 9 (Realtek RTD284x). Applied 27 Oct 2026 from
+# examples/tcl-uniontv-latin-america/debloat.txt. Everything here is disabled, not uninstalled.
+# Not listed: Google Assistant (katniss), offline hotword, Ambient Mode, TTS and TalkBack. This firmware turns
+# them back on at every boot, so they are left on rather than reported as drift every time.
+# Undo: tools\restore.ps1 -TvHost <ip> my-tv\debloat.txt
+com.tcl.bi
+com.tcl.partnercustomizer
+android.autoinstalls.config.tcl.device
+com.tcl.esticker
+com.tcl.usercenter
+com.tcl.common.terminalmanagerplus
+com.google.android.tvrecommendations
+com.google.android.leanbacklauncher.recommendations
+com.google.android.feedback
+com.google.android.tv.bugreportsender
+com.tcl.appmarket2
+com.tcl.tvweishi
+com.tcl.copydatatotv
+com.google.android.videos
+com.google.android.play.games
+com.google.android.music
+com.android.printspooler
+com.android.gallery3d
+com.android.wallpaper.livepicker
+com.android.dreams.basic

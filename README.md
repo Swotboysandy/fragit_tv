@@ -52,6 +52,15 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost <tv ip> themes\
 It installs the launcher from [Releases](https://github.com/Swotboysandy/fragit_tv/releases), makes it Home
 and pushes the frag theme. **Undo:** `uninstall.bat`.
 
+## One-click checks
+
+| Double-click | What it does |
+|---|---|
+| **`privacy-check.bat`** | Lists what the TV runs for voice (assistant, wake word), ACR content tracking and telemetry, with the evidence for each. Read only; the report opens in Notepad and is saved in `reports\`. |
+| **`update-check.bat`** | Run after a TCL firmware update. Says whether any app in `my-tv\debloat.txt` came back on and whether fragit_tv is still Home, then offers to fix it (switch them off again, put fragit_tv back). |
+
+Both remember the TV's IP in `tv-ip.txt` and need USB debugging on.
+
 ## Remove the TV's ads and bloat (optional)
 
 `tools/` and `examples/` are cleanyourtv's debloat tooling and tested TV lists:

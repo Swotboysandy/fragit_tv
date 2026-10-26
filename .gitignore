@@ -11,3 +11,5 @@ backup/
 launcher/hs_err_pid*.log
 launcher/replay_pid*.log
 __pycache__/
+tv-ip.txt
+reports/
