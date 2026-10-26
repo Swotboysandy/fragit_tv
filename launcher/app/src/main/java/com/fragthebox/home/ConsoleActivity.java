@@ -69,6 +69,7 @@ public class ConsoleActivity extends Activity {
     private ConsoleRow row;
     private LinearLayout bar;
     private GlassPanel barGlass;
+    private View homeCell;
     private GradientDrawable glow;
     private int glowColor = 0xFF5A6B8C;
     private android.animation.ValueAnimator glowAnim;
@@ -109,7 +110,6 @@ public class ConsoleActivity extends Activity {
         o.inPreferredConfig = Bitmap.Config.RGB_565;
         Bitmap builtIn = android.graphics.BitmapFactory.decodeResource(getResources(), R.drawable.console_default_wall, o);
         wallBack.setImageBitmap(builtIn);
-        GlassPanel.setBackdrop(builtIn, dm.widthPixels, dm.heightPixels);
 
         liveTvPkg = findLiveTvPackage();
         IntentFilter f = new IntentFilter();
@@ -198,6 +198,7 @@ public class ConsoleActivity extends Activity {
         clock.setFormat24Hour("h:mm a");
         clock.setTextColor(Color.WHITE);
         clock.setAllCaps(true);
+        clock.setShadowLayer(dp(8), 0, dp(1), 0x8C000000);   // readable over a bright wallpaper
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.5f);
         clock.setTypeface(getResources().getFont(R.font.outfit_regular));
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -240,21 +241,28 @@ public class ConsoleActivity extends Activity {
 
         // The bar: a frosted glass pill, as wide as the reference's and a little taller so the icons breathe.
         bar = buildBar();
-        barGlass = new GlassPanel(this, 23, 0x330B0D12);
-        barGlass.addView(bar, match());
+        barGlass = new GlassPanel(this, -1, GlassPanel.PILL);
+        // One long pill glides between the icons; out of the bar it rests, dimmed, on Home like a selected tab.
+        FrameLayout barBox = new FrameLayout(this);
+        SlidingPill barPill = new SlidingPill(this, 6, -1);
+        barBox.addView(barPill, match());
+        barBox.addView(bar, match());
+        barPill.follow(bar);
+        barPill.restOn(homeCell);
+        barGlass.addView(barBox, match());
         barGlass.setPadding(dp(8), 0, dp(8), 0);
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(470), dp(46), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         blp.bottomMargin = dp(22);
         root.addView(barGlass, blp);
 
         // Sheets float as a glass panel with margins on every side, not a slab glued to the screen's edge.
-        sheet = new GlassPanel(this, 26, 0x8C0B0D12);
+        sheet = new GlassPanel(this, 20, GlassPanel.PANEL);
         sheet.setVisibility(View.GONE);
-        sheet.setPadding(dp(46), dp(30), dp(46), dp(24));
-        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330), Gravity.BOTTOM);
-        slp.leftMargin = dp(40);
-        slp.rightMargin = dp(40);
-        slp.bottomMargin = dp(24);
+        // Sized to what it holds: a short list is a small panel, the app grid is as wide as its tiles.
+        sheet.setPadding(dp(8), dp(14), dp(8), dp(8));
+        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        slp.bottomMargin = dp(28);
         root.addView(sheet, slp);
         return root;
     }
@@ -269,7 +277,7 @@ public class ConsoleActivity extends Activity {
         if (notifications != null) {
             addBarIcon(b, R.drawable.ic_bar_bell, R.string.console_notifications, false, v -> start(notifications));
         }
-        View home = addBarIcon(b, R.drawable.ic_bar_home, R.string.console_home, true, v -> {
+        View home = homeCell = addBarIcon(b, R.drawable.ic_bar_home, R.string.console_home, true, v -> {
             row.home();
             row.requestFocus();
         });
@@ -293,18 +301,10 @@ public class ConsoleActivity extends Activity {
             if (has) lastBarFocus = v;
         });
 
-        View halo = new View(this);
-        halo.setDuplicateParentStateEnabled(true);
-        StateListDrawable states = new StateListDrawable();
-        GradientDrawable focusedHalo = circle(0x40FFFFFF);
-        focusedHalo.setStroke(Math.max(1, dp(0.8f)), 0xB3FFFFFF);
-        states.addState(new int[]{android.R.attr.state_focused}, focusedHalo);
-        states.addState(new int[]{}, circle(selected ? 0x26FFFFFF : 0x00FFFFFF));
-        halo.setBackground(states);
-        cell.addView(halo, new FrameLayout.LayoutParams(dp(36), dp(36), Gravity.CENTER));
-
         ImageView iv = new ImageView(this);
         iv.setImageResource(icon);
+        iv.setDuplicateParentStateEnabled(true);
+        if (icon != R.drawable.ic_bar_wifi) iv.setImageTintList(onPill());
         cell.addView(iv, new FrameLayout.LayoutParams(dp(icon == R.drawable.ic_bar_wifi ? 21 : 17),
                 dp(icon == R.drawable.ic_bar_wifi ? 21 : 17), Gravity.CENTER));
         if (icon == R.drawable.ic_bar_wifi) {
@@ -358,8 +358,6 @@ public class ConsoleActivity extends Activity {
     // ---- wallpaper ---------------------------------------------------------------------------------
 
     private void showWallpaper(Bitmap b) {
-        DisplayMetrics dm = getResources().getDisplayMetrics();
-        GlassPanel.setBackdrop(b, dm.widthPixels, dm.heightPixels);
         wallFront.setImageBitmap(b);
         wallFront.animate().cancel();
         wallFront.setAlpha(0f);
@@ -568,7 +566,7 @@ public class ConsoleActivity extends Activity {
                 if (i != null) start(i);
             }));
         }
-        openSheet(list);
+        openSheet(list, -1);
     }
 
     private void openInput(String inputId) {
@@ -592,7 +590,7 @@ public class ConsoleActivity extends Activity {
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(5);
         for (AppInfo a : loadApps()) {
-            FrameLayout tile = outlinedFocus(new FrameLayout(this));
+            FrameLayout tile = focusable(new FrameLayout(this));
             tile.setPadding(dp(4), dp(4), dp(4), dp(4));
             ImageView iv = new ImageView(this);
             iv.setScaleType(a.tvBanner ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.CENTER_INSIDE);
@@ -609,13 +607,17 @@ public class ConsoleActivity extends Activity {
             tile.addView(iv, new FrameLayout.LayoutParams(dp(128), dp(72)));
             tile.setOnClickListener(v -> launch(a));
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.setMargins(0, 0, dp(14), dp(14));
+            lp.setMargins(0, 0, (grid.getChildCount() % 5) == 4 ? 0 : dp(14), dp(14));
             grid.addView(tile, lp);
         }
         ScrollView scroll = new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(false);
         scroll.addView(grid);
-        box.addView(scroll);
-        openSheet(box);
+        // Two rows show at once; more scroll inside the panel instead of growing it up the screen.
+        int rows = (grid.getChildCount() + 4) / 5;
+        box.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                rows > 2 ? dp(2 * (72 + 8 + 14)) : ViewGroup.LayoutParams.WRAP_CONTENT));
+        openSheet(box, 14);
     }
 
     private void openPower() {
@@ -636,7 +638,7 @@ public class ConsoleActivity extends Activity {
             }));
         }
         list.addView(sheetItem(getString(R.string.console_settings), v -> start(new Intent(Settings.ACTION_SETTINGS))));
-        openSheet(list);
+        openSheet(list, -1);
     }
 
     private TextView sheetTitle(int text) {
@@ -647,45 +649,52 @@ public class ConsoleActivity extends Activity {
         t.setLetterSpacing(0.2f);
         t.setAllCaps(true);
         t.setTypeface(getResources().getFont(R.font.outfit_medium));
-        t.setPadding(0, 0, 0, dp(14));
+        t.setPadding(dp(16), 0, 0, dp(8));
         return t;
     }
 
     private View sheetItem(String label, View.OnClickListener click) {
-        TextView t = outlinedFocus(new TextView(this));
+        TextView t = focusable(new TextView(this));
         t.setText(label);
-        t.setTextColor(Color.WHITE);
+        t.setTextColor(onPill());
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         t.setTypeface(getResources().getFont(R.font.outfit_regular));
-        t.setPadding(dp(14), dp(10), dp(14), dp(10));
+        t.setPadding(dp(16), dp(9), dp(28), dp(9));
         t.setOnClickListener(click);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(360), ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(6);
+        // As wide as the longest label in the list (a wrap_content list stretches these to its widest child).
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(2);
         t.setLayoutParams(lp);
         return t;
     }
 
-    /** The reference's list focus: a thin white outline that moves between items, no scaling. */
-    private <T extends View> T outlinedFocus(T v) {
+    /** White, and the classic launcher's near-black (#141416) while the white focus pill sits under it. */
+    private static android.content.res.ColorStateList onPill() {
+        return new android.content.res.ColorStateList(
+                new int[][]{{android.R.attr.state_focused}, {}}, new int[]{0xFF141416, Color.WHITE});
+    }
+
+    /** Focus is shown by the sheet's sliding pill, so the items themselves stay plain. */
+    private <T extends View> T focusable(T v) {
         v.setFocusable(true);
-        StateListDrawable s = new StateListDrawable();
-        GradientDrawable on = new GradientDrawable();
-        on.setStroke(dp(1.5f), Color.WHITE);
-        on.setColor(0x14FFFFFF);
-        on.setCornerRadius(dp(6));
-        GradientDrawable off = new GradientDrawable();
-        off.setColor(0x00000000);
-        off.setCornerRadius(dp(6));
-        s.addState(new int[]{android.R.attr.state_focused}, on);
-        s.addState(new int[]{}, off);
-        v.setBackground(s);
         return v;
     }
 
-    /** Row and bar slide up and fade (250 ms), the sheet rises on a spring; the wallpaper stays put. */
-    private void openSheet(View content) {
+    /**
+     * Row and bar slide up and fade (250 ms), the sheet rises on a spring; the wallpaper stays put. A pill
+     * ({@code pillRadiusDp}, -1 for fully round) glides behind whatever is focused inside it.
+     */
+    private void openSheet(View content, float pillRadiusDp) {
         sheet.removeAllViews();
-        sheet.addView(content);
+        FrameLayout holder = new FrameLayout(this);
+        // The pill is measured 0x0 in a wrap_content holder (it never sets the sheet's size), so it draws
+        // past its own bounds over the items: the holder must not clip it.
+        holder.setClipChildren(false);
+        SlidingPill pill = new SlidingPill(this, 0, pillRadiusDp);
+        holder.addView(pill, match());
+        holder.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (content instanceof ViewGroup) pill.follow((ViewGroup) content);
+        sheet.addView(holder);
         sheetOpen = true;
         for (View v : new View[]{row, barGlass, title}) {
             v.animate().cancel();
