@@ -704,6 +704,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         btnInputs = findViewById(R.id.btnInputs);
+        findViewById(R.id.btnBrightness).setOnClickListener(v ->
+                startActivity(new Intent(this, BrightnessActivity.class)));
+        BrightnessService.update(this);
         View btnSettings = findViewById(R.id.btnSettings);
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());

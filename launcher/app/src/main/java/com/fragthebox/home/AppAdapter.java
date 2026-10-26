@@ -200,6 +200,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Set<String> libraryPreload;
     private final boolean animations;
     private final boolean advancedEffects;
+    /** glass_style lift: the focused tile rises toward you on a deep shadow (OLED look); the rest stay as they are. */
+    private final boolean lift;
+    static final float LIFT_DP = 8f, LIFT_Z_DP = 24f;
     private final boolean showLibrary;
     /** Packages with a leanback entry at the last reload(): their tiles launch with the leanback category. */
     private Set<String> leanbackPackages = new HashSet<>();
@@ -228,6 +231,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.libraryPreload = new HashSet<>(cfg.libraryApps);
         this.animations = cfg.animations;
         this.advancedEffects = cfg.animations && cfg.advancedEffects;
+        this.lift = Config.GLASS_LIFT.equals(cfg.glassStyle);
         this.showHomeSettings = cfg.showHomeSettingsShortcut;
         this.showLibrary = LibraryApps.showPill(cfg.appLibrary, cfg.libraryButton, cfg.showLibraryPill);
         this.reducedMotion = cfg.reducedMotion;
@@ -436,7 +440,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             View label = v.findViewById(R.id.label);
             label.setPadding(label.getPaddingLeft(), label.getPaddingTop(), label.getPaddingRight(), Math.round(4f * density));
         }
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot);
+        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot, lift);
     }
 
     @Override
@@ -470,6 +474,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
+        if (lift) {
+            float d = ctx.getResources().getDisplayMetrics().density;
+            h.card.setTranslationY(focused ? -LIFT_DP * d : 0f);
+            h.card.setTranslationZ(focused ? LIFT_Z_DP * d : 0f);
+        }
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
@@ -873,9 +882,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         /** Alpha of the name while the tile is not focused (always_show_names). */
         final float restNameAlpha;
         final boolean overshoot;
+        final boolean lift;
 
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion, float restNameAlpha, boolean overshoot) {
+               boolean reducedMotion, float restNameAlpha, boolean overshoot, boolean lift) {
             super(v);
             card = v.findViewById(R.id.card);
             cardBackground = card.getBackground();
@@ -888,6 +898,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             this.reducedMotion = reducedMotion;
             this.restNameAlpha = restNameAlpha;
             this.overshoot = overshoot;
+            this.lift = lift;
+            if (lift && android.os.Build.VERSION.SDK_INT >= 28) {
+                // A pure black shadow: the lifted tile floats over the picture like a lit panel on an OLED.
+                card.setOutlineAmbientShadowColor(0xFF000000);
+                card.setOutlineSpotShadowColor(0xFF000000);
+            }
 
             final float density = v.getResources().getDisplayMetrics().density;
             card.setOutlineProvider(new ViewOutlineProvider() {
@@ -936,6 +952,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     // left there the name overlaps the zoomed tile.
                     // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
                     if (focused) name.setTranslationY(density * 4f);
+                } else if (lift) {
+                    // OLED: no highlight. The tile rises toward you on a deep shadow; leaving, it settles back.
+                    view.animate().scaleX(s).scaleY(s)
+                            .translationY(focused ? -LIFT_DP * density : 0f)
+                            .translationZ(focused ? LIFT_Z_DP * density : 0f)
+                            .setDuration(focused ? 300 : 220)
+                            .setInterpolator(new DecelerateInterpolator(1.8f))
+                            .withLayer().start();
+                    name.animate().alpha(focused ? 1f : restNameAlpha)
+                            .translationY(focused ? density * 4f : -density * 6f)
+                            .setDuration(220).start();
                 } else {
                     view.animate().scaleX(s).scaleY(s)
                             .translationY(focused && advancedEffects ? -4f * density : 0f)

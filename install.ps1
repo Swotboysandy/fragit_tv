@@ -82,6 +82,8 @@ $out = (& $adb -s $target install -r $Apk) -join "`n"
 Write-Host $out
 if ($out -notmatch 'Success') { throw 'Install failed; the TV was left as it was.' }
 Tv "pm grant $pkg android.permission.ACCESS_FINE_LOCATION" | Out-Null
+# The brightness button's dim layer draws over other apps.
+Tv "appops set $pkg SYSTEM_ALERT_WINDOW allow" | Out-Null
 $set = Tv "cmd package set-home-activity --user 0 $pkg/.MainActivity"
 $start = Tv "am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n $pkg/.MainActivity"
 $homeNow = (Tv 'cmd package resolve-activity --brief -c android.intent.category.HOME -a android.intent.action.MAIN').Trim().Split("`n")[-1]

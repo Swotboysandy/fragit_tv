@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Frag the Box</string>
+    <string name="brightness">Brightness</string>
+    <string name="brightness_auto">Auto (by time of day)</string>
+    <string name="brightness_tv_picture">TV picture settings</string>
     <string name="inputs">Inputs</string>
     <string name="wifi">Wi-Fi</string>
     <string name="settings">Settings</string>

@@ -232,6 +232,8 @@ final class Config {
 
     static final String GLOW_RADIAL = "radial", GLOW_HORIZON = "horizon";
     static final String GLASS_DEFAULT = "glass", GLASS_RIM = "rim", GLASS_HALO = "halo";
+    /** frag: no highlight at all; the focused tile lifts on a deep shadow (OLED look). */
+    static final String GLASS_LIFT = "lift";
     /** Show each rotating wallpaper's name from wallpapers/captions.txt (config.xml / theme wallpaper_captions). */
     final boolean wallpaperCaptions;
     /** Answer VIEW_INPUTS with the Inputs menu (handle_view_inputs); see InputsRequestActivity. */
@@ -389,6 +391,7 @@ final class Config {
         if (value == null) return GLASS_DEFAULT;
         String v = value.trim();
         if (GLASS_RIM.equalsIgnoreCase(v)) return GLASS_RIM;
+        if (GLASS_LIFT.equalsIgnoreCase(v)) return GLASS_LIFT;
         return GLASS_HALO.equalsIgnoreCase(v) ? GLASS_HALO : GLASS_DEFAULT;
     }
 

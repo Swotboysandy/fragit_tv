@@ -62,7 +62,11 @@ public class GlassView extends View {
     }
 
     /** One of Config's GLASS_* styles. */
+    /** glass_style lift: nothing is drawn; focus is the tile itself lifting (AppAdapter). */
+    private boolean hidden;
+
     void setStyle(String style) {
+        hidden = Config.GLASS_LIFT.equals(style);
         flat = Config.GLASS_RIM.equals(style) || Config.GLASS_HALO.equals(style);
         halo = Config.GLASS_HALO.equals(style);
         rim.setStrokeWidth((flat ? 2f : 1.5f) * density);
@@ -83,6 +87,7 @@ public class GlassView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (hidden) return;
         float inset = 6f * density;   // room for the glow
         rect.set(inset, inset, getWidth() - inset, getHeight() - inset);
 

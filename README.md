@@ -13,7 +13,10 @@ so it is just as smooth; the look comes from cleanyourtv's own theme system, in 
 | Round icon buttons at the top | `icon_only_buttons`, `icon_only_inputs` |
 | Netflix, Prime Video, YouTube, OliverTV in front | `dock_apps` |
 | Hold OK on a tile to move it or take it off Home; App library for the rest | `tile_menu`, `app_library` |
-| Quiet focus, no bounce | `glass_style: rim`, `focus_overshoot: false` |
+| Spider-Man wallpaper by default; the others in Launcher settings → Wallpaper | `wallpaper.jpg` + `wallpapers/` |
+| OLED focus: no rim, the focused tile lifts on a deep shadow | `glass_style: lift` (frag addition), `focus_overshoot: false` |
+| Apple-style glass dock and top buttons | `dock_glass` (frag: brighter pane, top sheen, light-catching rim) |
+| Brightness button at the top: Auto by time of day, 100–20 %, TV picture settings | frag addition (a dim layer over every app; the TV's real backlight stays in its Picture menu) |
 
 Change the look by editing `themes/frag/config.json` (every key is in cleanyourtv's
 [themes README](https://github.com/Gathin23/cleanyourtv/blob/main/themes/README.md)) or the pictures in

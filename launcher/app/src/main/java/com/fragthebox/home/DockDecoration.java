@@ -18,6 +18,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final float density;
     private final Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
     /** Extra band below the tiles for their names (always_show_names), in px. */
@@ -140,13 +141,24 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         }
         rect.bottom += namesRoom;
         if (lightGlass && (rect.top != shaderTop || rect.bottom != shaderBottom)) {
-            // The pills' glass (pill_bg: white, 18% fading to 8%), a little fainter over this much larger area.
-            band.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x24FFFFFF, 0x0DFFFFFF,
+            // frag: Apple-style glass. A milky pane, brighter at the top; a sheen over the upper part; and a rim
+            // that catches the light along the top edge and fades toward the bottom.
+            band.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x3DFFFFFF, 0x17FFFFFF,
+                    Shader.TileMode.CLAMP));
+            sheen.setShader(new LinearGradient(0, rect.top, 0, rect.top + rect.height() * 0.5f, 0x24FFFFFF, 0x00FFFFFF,
+                    Shader.TileMode.CLAMP));
+            edge.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x99FFFFFF, 0x1FFFFFFF,
                     Shader.TileMode.CLAMP));
             shaderTop = rect.top;
             shaderBottom = rect.bottom;
         }
         c.drawRoundRect(rect, radius, radius, band);
+        if (lightGlass) {
+            c.save();
+            c.clipRect(rect.left, rect.top, rect.right, rect.top + rect.height() * 0.5f);
+            c.drawRoundRect(rect, radius, radius, sheen);
+            c.restore();
+        }
         c.drawRoundRect(rect, radius, radius, edge);
     }
 }

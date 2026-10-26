@@ -362,6 +362,14 @@
                     android:drawableStart="@drawable/ic_apps_pill"
                     android:nextFocusDown="@+id/grid" />
 
+                <!-- frag: brightness (Auto and levels) -->
+                <TextView
+                    android:id="@+id/btnBrightness"
+                    style="@style/TopButtonIcon"
+                    android:contentDescription="@string/brightness"
+                    android:drawableStart="@drawable/ic_brightness"
+                    android:nextFocusDown="@+id/grid" />
+
                 <TextView
                     android:id="@+id/btnSettings"
                     style="@style/TopButton"
