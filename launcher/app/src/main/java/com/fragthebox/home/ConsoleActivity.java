@@ -483,10 +483,14 @@ public class ConsoleActivity extends Activity {
         bloom.setColors(new int[]{Ambience.withAlpha(ambience.lightColor, a),
                 Ambience.withAlpha(ambience.lightColor, a / 4), 0x00000000});
         int floor = ambience.floorColor;
-        int depth = Math.round(0x66 + 0x40 * ambience.brightness);
-        shade.setColors(new int[]{0x00000000, Ambience.withAlpha(floor, depth / 3), Ambience.withAlpha(floor, depth)});
-        band.setTint(ambience.moodColor);
-        barGlass.setTint(ambience.moodColor);
+        // Bright daylight pictures need more ground under the row and text than night ones.
+        int depth = Math.round(0x70 + 0x58 * ambience.brightness);
+        shade.setColors(new int[]{0x00000000, 0x00000000, Ambience.withAlpha(floor, depth / 2), Ambience.withAlpha(floor, depth)});
+        int glassTint = Ambience.darken(ambience.moodColor, 0.45f * ambience.brightness);
+        band.setTint(glassTint);
+        barGlass.setTint(glassTint);
+        title.setShadowLayer(dp(14 + 8 * ambience.brightness), 0, dp(1), Ambience.withAlpha(0xFF000000,
+                Math.round(0x59 + 0x60 * ambience.brightness)));
         setGlow(glowColor);
         if (animate) {
             bloomView.setAlpha(0f);

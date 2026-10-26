@@ -41,7 +41,7 @@ final class GitWallpapers {
     }
 
     private static final String PREFS = "git_wallpapers";
-    private static final long LIST_MAX_AGE = 60 * 60 * 1000L;
+    private static final long LIST_MAX_AGE = 15 * 60 * 1000L;
 
     private final Context ctx;
     private final String repo, path;
@@ -72,7 +72,7 @@ final class GitWallpapers {
                     : cached == null || !pinned.equals(p.getString("shown_url", ""));
             if (!due || repo.isEmpty()) return;
             try {
-                List<String> urls = listing(p);
+                List<String> urls = listing(p, false);
                 if (urls.isEmpty()) return;
                 int next = pinned.isEmpty() ? (p.getInt("index", -1) + 1) % urls.size() : urls.indexOf(pinned);
                 if (next < 0) next = 0;
@@ -99,7 +99,7 @@ final class GitWallpapers {
             SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
             List<String> urls = new ArrayList<>(), thumbs = new ArrayList<>();
             try {
-                urls = listing(p);
+                urls = listing(p, true);   // the picker always shows what is in the folder now
                 for (String u : urls) {
                     int slash = u.lastIndexOf('/');
                     thumbs.add(u.substring(0, slash) + "/thumbs" + u.substring(slash));
@@ -130,10 +130,10 @@ final class GitWallpapers {
         }
     }
 
-    private List<String> listing(SharedPreferences p) throws Exception {
+    private List<String> listing(SharedPreferences p, boolean fresh) throws Exception {
         String saved = p.getString("listing", "");
         long at = p.getLong("listing_at", 0);
-        if (!saved.isEmpty() && System.currentTimeMillis() - at < Math.min(rotateMs, LIST_MAX_AGE)) {
+        if (!fresh && !saved.isEmpty() && System.currentTimeMillis() - at < Math.min(rotateMs, LIST_MAX_AGE)) {
             return parse(saved);
         }
         String api = "https://api.github.com/repos/" + repo + "/contents/" + path;

@@ -17,8 +17,8 @@
     <string name="console_move">Move</string>
     <string name="console_wallpaper">Wallpaper</string>
     <string name="console_tv_settings">TV settings</string>
-    <string name="console_wall_rotate">Rotate through all of them</string>
-    <string name="console_wall_rotate_on">Rotating through all of them ✓</string>
+    <string name="console_wall_rotate">Rotate all, every hour</string>
+    <string name="console_wall_rotate_on">Rotating all ✓</string>
     <string name="console_wall_offline">Can\'t reach the wallpaper folder right now.</string>
     <string name="console_remove_from_home">Remove from Home</string>
     <string name="console_app_info">App info</string>
