@@ -8,7 +8,6 @@ so it is just as smooth; the look comes from cleanyourtv's own theme system, in 
 
 | Part | Theme setting |
 |---|---|
-| My wallpapers, a new one every hour | `themes/frag/wallpapers/` + `wallpaper_rotation_minutes: 60` |
 | Glass dock and a soft glow in the focused app's colour | `dock_glass`, `app_glow`, `ambient_glow` |
 | Round icon buttons at the top | `icon_only_buttons`, `icon_only_inputs` |
 | Netflix, Prime Video, YouTube, OliverTV in front | `dock_apps` |
