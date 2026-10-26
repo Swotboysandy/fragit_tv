@@ -26,6 +26,8 @@ final class GlassPanel extends FrameLayout {
     private final float density;
     private final float radius;   // < 0: fully round ends
     private final int style;
+    /** The wallpaper's mood colour, mixed faintly into the glass so it belongs to the picture. */
+    private int tint;
 
     GlassPanel(Context ctx, float radiusDp, int style) {
         super(ctx);
@@ -42,10 +44,11 @@ final class GlassPanel extends FrameLayout {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        if (h <= 0) return;
         fill.setShader(style == PILL
-                ? new LinearGradient(0, 0, 0, h, 0x2EFFFFFF, 0x14FFFFFF, Shader.TileMode.CLAMP)
+                ? new LinearGradient(0, 0, 0, h, tinted(0x2EFFFFFF), tinted(0x14FFFFFF), Shader.TileMode.CLAMP)
                 : style == MATTE
-                ? new LinearGradient(0, 0, 0, h, 0x40FFFFFF, 0x26FFFFFF, Shader.TileMode.CLAMP)
+                ? new LinearGradient(0, 0, 0, h, tinted(0x40FFFFFF), tinted(0x26FFFFFF), Shader.TileMode.CLAMP)
                 : new LinearGradient(0, 0, 0, h, 0xF22A2A2E, 0xF5161618, Shader.TileMode.CLAMP));
         setOutlineProvider(new android.view.ViewOutlineProvider() {
             @Override
@@ -53,6 +56,19 @@ final class GlassPanel extends FrameLayout {
                 outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), r(view.getHeight()));
             }
         });
+    }
+
+    void setTint(int color) {
+        tint = color;
+        onSizeChanged(getWidth(), getHeight(), getWidth(), getHeight());
+        invalidate();
+    }
+
+    private int tinted(int glass) {
+        if (tint == 0) return glass;
+        int a = glass >>> 24;
+        int mixed = Ambience.mix(glass | 0xFF000000, tint | 0xFF000000, 0.35f);
+        return Ambience.withAlpha(mixed, a);
     }
 
     private float r(int h) {

@@ -73,7 +73,9 @@ public class ConsoleActivity extends Activity {
     /** The band: 12 dp around the focused tile (101 dp at 1.10x), 88 dp above the screen's bottom. */
     private static final float BAND_PAD = 12f, BAND_H = 111f + 2 * 12f, BAND_BOTTOM = 88f;
     private View homeCell;
-    private GradientDrawable glow;
+    private GradientDrawable glow, bloom, shade;
+    private View bloomView;
+    private Ambience ambience = new Ambience();
     private int glowColor = 0xFF5A6B8C;
     private android.animation.ValueAnimator glowAnim;
     private TextView title;
@@ -115,6 +117,8 @@ public class ConsoleActivity extends Activity {
         o.inPreferredConfig = Bitmap.Config.RGB_565;
         Bitmap builtIn = android.graphics.BitmapFactory.decodeResource(getResources(), R.drawable.console_default_wall, o);
         wallBack.setImageBitmap(builtIn);
+        applyAmbience(builtIn, false);
+        breathe();
 
         liveTvPkg = findLiveTvPackage();
         IntentFilter f = new IntentFilter();
@@ -202,20 +206,29 @@ public class ConsoleActivity extends Activity {
         wallFront.setAlpha(0f);
         root.addView(wallFront, match());
 
-        // Ambient glow in the focused app's colour, the classic launcher's "top shelf" light.
+        // The wallpaper's own light, bloomed softly where it comes from, so the picture feels lit, not dimmed.
+        bloom = new GradientDrawable();
+        bloom.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        bloom.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.55f);
+        bloomView = new View(this);
+        bloomView.setBackground(bloom);
+        root.addView(bloomView, match());
+
+        // A faint glow in the focused app's colour, mixed into the picture's light rather than painted over it.
         glow = new GradientDrawable();
         glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        glow.setGradientCenter(0.3f, 0.62f);
-        glow.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.62f);
+        glow.setGradientCenter(0.3f, 0.7f);
+        glow.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.5f);
         setGlow(glowColor);
         View glowView = new View(this);
         glowView.setBackground(glow);
         root.addView(glowView, match());
 
-        View shade = new View(this);
-        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x00000000, 0x00000000, 0x8C000000}));
-        root.addView(shade, match());
+        // Shade only under the row and text, in the picture's own darkest tone, never a black band.
+        shade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0, 0, 0});
+        View shadeView = new View(this);
+        shadeView.setBackground(shade);
+        root.addView(shadeView, match());
 
         // The clock large and thin at the top left, AM/PM small beside it.
         LinearLayout clockBox = new LinearLayout(this);
@@ -244,6 +257,20 @@ public class ConsoleActivity extends Activity {
             @Override
             public void onFocused(ConsoleRow.Item item) {
                 showFocused(item);
+            }
+
+            @Override
+            public void onMenu(ConsoleRow.Item item) {
+                if (item.pkg != null) openTileMenu(item);
+            }
+
+            @Override
+            public void onReordered(List<ConsoleRow.Item> order) {
+                List<String> pkgs = new ArrayList<>();
+                for (ConsoleRow.Item it : order) if (it.pkg != null) pkgs.add(it.pkg);
+                // Apps on Home that aren't installed right now keep their place at the end.
+                for (String pkg : homeApps()) if (!pkgs.contains(pkg)) pkgs.add(pkg);
+                saveHomeApps(pkgs);
             }
         });
 
@@ -282,7 +309,7 @@ public class ConsoleActivity extends Activity {
         topButton(top, btIcon, bluetoothOn() ? LucideIcons.BLUETOOTH : LucideIcons.BLUETOOTH_OFF,
                 R.string.console_bluetooth, v -> start(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)));
         topButton(top, new MorphIconView(this), LucideIcons.SETTINGS, R.string.console_settings,
-                v -> start(new Intent(Settings.ACTION_SETTINGS)));
+                v -> openSettings());
         FrameLayout.LayoutParams toplp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
         toplp.topMargin = dp(38);
@@ -443,12 +470,55 @@ public class ConsoleActivity extends Activity {
 
     private void setGlow(int color) {
         glowColor = color;
-        glow.setColors(new int[]{(color & 0x00FFFFFF) | 0x8C000000, (color & 0x00FFFFFF) | 0x26000000, 0x00000000});
+        int c = Ambience.mix(color, ambience.lightColor, 0.45f);
+        glow.setColors(new int[]{Ambience.withAlpha(c, 0x47), Ambience.withAlpha(c, 0x14), 0x00000000});
+    }
+
+    /** Re-lights the screen from a new wallpaper: bloom, shade, glow and glass all take its colours. */
+    private void applyAmbience(Bitmap wall, boolean animate) {
+        ambience = Ambience.of(wall);
+        bloom.setGradientCenter(ambience.lightX, ambience.lightY);
+        // Brighter pictures get a gentler bloom: the light is already there.
+        int a = Math.round(0x59 - 0x30 * ambience.brightness);
+        bloom.setColors(new int[]{Ambience.withAlpha(ambience.lightColor, a),
+                Ambience.withAlpha(ambience.lightColor, a / 4), 0x00000000});
+        int floor = ambience.floorColor;
+        int depth = Math.round(0x66 + 0x40 * ambience.brightness);
+        shade.setColors(new int[]{0x00000000, Ambience.withAlpha(floor, depth / 3), Ambience.withAlpha(floor, depth)});
+        band.setTint(ambience.moodColor);
+        barGlass.setTint(ambience.moodColor);
+        setGlow(glowColor);
+        if (animate) {
+            bloomView.setAlpha(0f);
+            bloomView.animate().alpha(1f).setDuration(900).start();
+        }
+    }
+
+    /** The picture drifts and its light breathes, very slowly: a living backdrop that never draws the eye. */
+    private void breathe() {
+        for (View v : new View[]{wallBack, wallFront}) {
+            android.animation.ObjectAnimator sx = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_X, 1f, 1.05f);
+            android.animation.ObjectAnimator sy = android.animation.ObjectAnimator.ofFloat(v, View.SCALE_Y, 1f, 1.05f);
+            for (android.animation.ObjectAnimator o : new android.animation.ObjectAnimator[]{sx, sy}) {
+                o.setDuration(45000);
+                o.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+                o.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                o.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+                o.start();
+            }
+        }
+        android.animation.ObjectAnimator light = android.animation.ObjectAnimator.ofFloat(bloomView, View.ALPHA, 1f, 0.7f);
+        light.setDuration(9000);
+        light.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        light.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        light.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+        light.start();
     }
 
     // ---- wallpaper ---------------------------------------------------------------------------------
 
     private void showWallpaper(Bitmap b) {
+        applyAmbience(b, true);
         wallFront.setImageBitmap(b);
         wallFront.animate().cancel();
         wallFront.setAlpha(0f);
@@ -461,6 +531,51 @@ public class ConsoleActivity extends Activity {
     }
 
     // ---- the row ------------------------------------------------------------------------------------
+
+    private static final String PREFS = "console_home";
+
+    /** The apps on Home, in order: the owner's saved list, or config.xml home_apps until one is saved. */
+    private List<String> homeApps() {
+        String saved = getSharedPreferences(PREFS, MODE_PRIVATE).getString("home_apps", null);
+        if (saved == null) return new ArrayList<>(Arrays.asList(getResources().getStringArray(R.array.home_apps)));
+        List<String> out = new ArrayList<>();
+        for (String pkg : saved.split(",")) if (!pkg.isEmpty()) out.add(pkg);
+        return out;
+    }
+
+    private void saveHomeApps(List<String> pkgs) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("home_apps", android.text.TextUtils.join(",", pkgs)).apply();
+    }
+
+    private void setOnHome(String pkg, boolean on) {
+        List<String> pkgs = homeApps();
+        pkgs.remove(pkg);
+        if (on) pkgs.add(pkg);
+        saveHomeApps(pkgs);
+        refreshRow();
+    }
+
+    /** Hold OK on a tile: Move (Left and Right carry it, OK puts it down), Remove from Home, App info. */
+    private void openTileMenu(ConsoleRow.Item item) {
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        TextView head = sheetTitle(R.string.console_apps);
+        head.setText(item.title);
+        list.addView(head);
+        list.addView(sheetItem(getString(R.string.console_move), v -> {
+            closeSheet();
+            row.requestFocus();
+            row.post(row::startMove);
+        }));
+        list.addView(sheetItem(getString(R.string.console_remove_from_home), v -> {
+            closeSheet();
+            row.requestFocus();
+            setOnHome(item.pkg, false);
+        }));
+        list.addView(sheetItem(getString(R.string.console_app_info), v -> start(
+                new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + item.pkg)))));
+        openSheet(list, -1);
+    }
 
     private void refreshRow() {
         new Thread(() -> {
@@ -478,9 +593,15 @@ public class ConsoleActivity extends Activity {
                     it.open = () -> start(cont.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                     items.add(it);
                 }
-                for (AppInfo a : apps) {
+                // Only the apps on Home, in the owner's order; everything else is in All apps.
+                java.util.Map<String, AppInfo> byPkg = new java.util.HashMap<>();
+                for (AppInfo a : apps) byPkg.put(a.pkg, a);
+                List<AppInfo> onHome = new ArrayList<>();
+                for (String pkg : homeApps()) if (byPkg.containsKey(pkg)) onHome.add(byPkg.get(pkg));
+                for (AppInfo a : onHome) {
                     ConsoleRow.Item it = new ConsoleRow.Item();
                     it.title = a.label;
+                    it.pkg = a.pkg;
                     if (a.tvBanner) it.art = a.banner;
                     else it.icon = a.banner;
                     it.bg = a.tvBanner ? a.bg : 0xFF1C1C1E;
@@ -638,6 +759,89 @@ public class ConsoleActivity extends Activity {
 
     // ---- sheets -----------------------------------------------------------------------------------
 
+    private void openSettings() {
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.addView(sheetTitle(R.string.console_settings));
+        list.addView(sheetItem(getString(R.string.console_wallpaper), v -> openWallpapers()));
+        list.addView(sheetItem(getString(R.string.console_tv_settings), v -> start(new Intent(Settings.ACTION_SETTINGS))));
+        openSheet(list, -1);
+    }
+
+    /** Pick one picture to keep, or let them rotate; the pictures are this repo's wallpapers folder. */
+    private void openWallpapers() {
+        wallpapers.list((urls, thumbs, pinned) -> {
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.addView(sheetTitle(R.string.console_wallpaper));
+            View rotateItem = sheetItem(getString(pinned.isEmpty() ? R.string.console_wall_rotate_on
+                    : R.string.console_wall_rotate), v -> {
+                closeSheet();
+                wallpapers.pin(null, this::showWallpaper);
+            });
+            box.addView(rotateItem);
+            if (urls.isEmpty()) {
+                TextView none = sheetTitle(R.string.console_wall_offline);
+                none.setAllCaps(false);
+                box.addView(none);
+                openSheet(box, -1);
+                return;
+            }
+            LinearLayout strip = new LinearLayout(this);
+            strip.setOrientation(LinearLayout.HORIZONTAL);
+            strip.setPadding(0, dp(6), 0, 0);
+            for (int i = 0; i < urls.size(); i++) {
+                String url = urls.get(i);
+                FrameLayout tile = focusable(new FrameLayout(this));
+                tile.setPadding(dp(4), dp(4), dp(4), dp(4));
+                ImageView iv = new ImageView(this);
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                iv.setBackgroundColor(0xFF1C1C1E);
+                iv.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                    @Override
+                    public void getOutline(View view, android.graphics.Outline outline) {
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(12));
+                    }
+                });
+                iv.setClipToOutline(true);
+                tile.addView(iv, new FrameLayout.LayoutParams(dp(128), dp(72)));
+                if (url.equals(pinned)) {
+                    FrameLayout badge = new FrameLayout(this);
+                    badge.setBackground(circle(0xF5FFFFFF));
+                    MorphIconView check = new MorphIconView(this);
+                    check.setTint(android.content.res.ColorStateList.valueOf(0xFF141416));
+                    check.setIcon(LucideIcons.CHECK, false);
+                    badge.addView(check, new FrameLayout.LayoutParams(dp(11), dp(11), Gravity.CENTER));
+                    FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(18), dp(18), Gravity.TOP | Gravity.END);
+                    blp.topMargin = dp(8);
+                    blp.rightMargin = dp(8);
+                    tile.addView(badge, blp);
+                }
+                tile.setOnClickListener(v -> {
+                    closeSheet();
+                    wallpapers.pin(url, this::showWallpaper);
+                });
+                String thumbUrl = thumbs.get(i), fullUrl = url;
+                new Thread(() -> {
+                    Bitmap t = GitWallpapers.thumb(thumbUrl);
+                    if (t == null) t = GitWallpapers.thumb(fullUrl);
+                    Bitmap ft = t;
+                    if (ft != null) main.post(() -> iv.setImageBitmap(ft));
+                }, "wall-thumb").start();
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                if (i > 0) lp.leftMargin = dp(10);
+                strip.addView(tile, lp);
+            }
+            android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+            scroll.setHorizontalScrollBarEnabled(false);
+            scroll.addView(strip);
+            box.addView(scroll, new LinearLayout.LayoutParams(Math.min(dp(5 * 146), dp(146) * urls.size()),
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            openSheet(box, 14);
+        });
+    }
+
     private void openInputs() {
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
@@ -678,8 +882,16 @@ public class ConsoleActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.addView(sheetTitle(R.string.console_apps));
+        TextView hint = new TextView(this);
+        hint.setText(R.string.console_apps_hint);
+        hint.setTextColor(0x99FFFFFF);
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        hint.setTypeface(getResources().getFont(R.font.outfit_regular));
+        hint.setPadding(dp(16), 0, 0, dp(10));
+        box.addView(hint);
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(5);
+        List<String> home = homeApps();
         for (AppInfo a : loadApps()) {
             FrameLayout tile = focusable(new FrameLayout(this));
             tile.setPadding(dp(4), dp(4), dp(4), dp(4));
@@ -696,7 +908,26 @@ public class ConsoleActivity extends Activity {
             });
             iv.setClipToOutline(true);
             tile.addView(iv, new FrameLayout.LayoutParams(dp(128), dp(72)));
+            // A white check badge on the apps that are on Home; holding OK adds or removes the app.
+            FrameLayout badge = new FrameLayout(this);
+            badge.setBackground(circle(0xF5FFFFFF));
+            badge.setElevation(dp(2));
+            MorphIconView check = new MorphIconView(this);
+            check.setTint(android.content.res.ColorStateList.valueOf(0xFF141416));
+            check.setIcon(LucideIcons.CHECK, false);
+            badge.addView(check, new FrameLayout.LayoutParams(dp(11), dp(11), Gravity.CENTER));
+            FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(18), dp(18), Gravity.TOP | Gravity.END);
+            blp.topMargin = dp(8);
+            blp.rightMargin = dp(8);
+            badge.setVisibility(home.contains(a.pkg) ? View.VISIBLE : View.GONE);
+            tile.addView(badge, blp);
             tile.setOnClickListener(v -> launch(a));
+            tile.setOnLongClickListener(v -> {
+                boolean on = badge.getVisibility() != View.VISIBLE;
+                badge.setVisibility(on ? View.VISIBLE : View.GONE);
+                setOnHome(a.pkg, on);
+                return true;
+            });
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
             lp.setMargins(0, 0, (grid.getChildCount() % 5) == 4 ? 0 : dp(14), dp(14));
             grid.addView(tile, lp);

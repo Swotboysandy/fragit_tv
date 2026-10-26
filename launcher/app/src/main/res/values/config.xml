@@ -474,7 +474,16 @@
          built-in picture only. -->
     <string name="wallpaper_repo" translatable="false">Swotboysandy/frag_the_box</string>
     <string name="wallpaper_path" translatable="false">wallpapers</string>
-    <integer name="wallpaper_rotate_hours">6</integer>
+    <integer name="wallpaper_rotate_hours">1</integer>
+    <!-- The console home's row until the owner edits it (hold OK on a tile, or in All apps): these apps, in this
+         order, where installed. Everything else is in All apps. -->
+    <string-array name="home_apps" translatable="false">
+        <item>com.netflix.ninja</item>
+        <item>com.amazon.amazonvideo.livingroom</item>
+        <item>com.google.android.youtube.tv</item>
+        <item>in.startv.hotstar</item>
+        <item>com.olivertv</item>
+    </string-array>
     <!-- The Music icon opens the first of these that is installed; with none, the icon is left out. -->
     <string-array name="music_apps" translatable="false">
         <item>com.google.android.youtube.tvmusic</item>

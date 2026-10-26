@@ -35,6 +35,11 @@ final class GitWallpapers {
         void onWallpaper(Bitmap bitmap);
     }
 
+    interface ListCallback {
+        /** Every picture's full-size URL, with a thumbnail URL from thumbs/ (null when the folder has none). */
+        void onList(List<String> urls, List<String> thumbs, String pinned);
+    }
+
     private static final String PREFS = "git_wallpapers";
     private static final long LIST_MAX_AGE = 60 * 60 * 1000L;
 
@@ -55,18 +60,22 @@ final class GitWallpapers {
         this.current = new File(this.ctx.getFilesDir(), "git_wallpaper");
     }
 
-    /** The cached picture now (if any), then a new one when the rotation is due. */
+    /** The cached picture now (if any), then a new one when the rotation is due or a picked one isn't shown yet. */
     void load(Callback cb) {
         new Thread(() -> {
             Bitmap cached = decode(current);
             if (cached != null) post(cb, cached);
             SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-            boolean due = cached == null || System.currentTimeMillis() - p.getLong("shown_at", 0) >= rotateMs;
+            String pinned = p.getString("pinned", "");
+            boolean due = pinned.isEmpty()
+                    ? cached == null || System.currentTimeMillis() - p.getLong("shown_at", 0) >= rotateMs
+                    : cached == null || !pinned.equals(p.getString("shown_url", ""));
             if (!due || repo.isEmpty()) return;
             try {
                 List<String> urls = listing(p);
                 if (urls.isEmpty()) return;
-                int next = (p.getInt("index", -1) + 1) % urls.size();
+                int next = pinned.isEmpty() ? (p.getInt("index", -1) + 1) % urls.size() : urls.indexOf(pinned);
+                if (next < 0) next = 0;
                 File tmp = new File(ctx.getFilesDir(), "git_wallpaper.part");
                 download(urls.get(next), tmp);
                 Bitmap fresh = decode(tmp);
@@ -75,12 +84,50 @@ final class GitWallpapers {
                     current.delete();
                     if (!tmp.renameTo(current)) return;
                 }
-                p.edit().putInt("index", next).putLong("shown_at", System.currentTimeMillis()).apply();
+                p.edit().putInt("index", next).putLong("shown_at", System.currentTimeMillis())
+                        .putString("shown_url", urls.get(next)).apply();
                 post(cb, fresh);
             } catch (Exception ignored) {
                 // offline, rate limited or a bad file: keep what is on screen
             }
         }, "git-wallpapers").start();
+    }
+
+    /** The pictures in the folder, for the picker; on the main thread. */
+    void list(ListCallback cb) {
+        new Thread(() -> {
+            SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            List<String> urls = new ArrayList<>(), thumbs = new ArrayList<>();
+            try {
+                urls = listing(p);
+                for (String u : urls) {
+                    int slash = u.lastIndexOf('/');
+                    thumbs.add(u.substring(0, slash) + "/thumbs" + u.substring(slash));
+                }
+            } catch (Exception ignored) {
+                // offline: an empty picker says so
+            }
+            List<String> fu = urls, ft = thumbs;
+            String pinned = p.getString("pinned", "");
+            main.post(() -> cb.onList(fu, ft, pinned));
+        }, "git-wallpapers-list").start();
+    }
+
+    /** Shows this picture from now on; null goes back to rotating through the folder. */
+    void pin(String url, Callback cb) {
+        SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        p.edit().putString("pinned", url == null ? "" : url).putLong("shown_at", 0).apply();
+        load(cb);
+    }
+
+    /** A small picture for the picker, decoded off the main thread; null when it can't be fetched. */
+    static Bitmap thumb(String url) {
+        try {
+            byte[] b = fetch(url);
+            return BitmapFactory.decodeByteArray(b, 0, b.length);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private List<String> listing(SharedPreferences p) throws Exception {

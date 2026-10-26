@@ -36,6 +36,10 @@ final class ConsoleRow extends FrameLayout {
     interface Listener {
         void onOpen(Item item);
         void onFocused(Item item);
+        /** OK held on a tile: the tile's menu (Move, Remove from Home). */
+        void onMenu(Item item);
+        /** Move mode ended with the tiles in a new order. */
+        void onReordered(List<Item> order);
     }
 
     static final class Item {
@@ -48,10 +52,13 @@ final class ConsoleRow extends FrameLayout {
         boolean resume;        // the continue-watching card: percent, "In progress", Resume
         float progress;
         String source;
+        String pkg;            // the app behind the tile; null for the Continue watching card
         Runnable open;
     }
 
     static final float CARD_W = 180f, CARD_H = 101f, GAP = 22f, FOCUS_SCALE = 1.10f, RADIUS = 16f;
+    /** A picked-up tile (Move) sits a little larger than a focused one. */
+    private static final float MOVE_SCALE = 1.16f;
     private static final float STIFFNESS = 420f, DAMPING = 0.92f;
 
     private final float density;
@@ -60,6 +67,9 @@ final class ConsoleRow extends FrameLayout {
     private int focus;
     private Listener listener;
     private GlassView halo;
+    /** How far the row is scrolled: only as much as keeps the focused tile inside the band. */
+    private float offset;
+    private boolean moving, longPressed;
 
     ConsoleRow(Context ctx) {
         super(ctx);
@@ -88,7 +98,7 @@ final class ConsoleRow extends FrameLayout {
             cards.add(card);
             addView(card, new LayoutParams(px(CARD_W), px(CARD_H), Gravity.CENTER_VERTICAL | Gravity.START));
         }
-        // The glass rim and soft glow of the classic launcher, fixed on the first slot where focus always sits.
+        // The glass rim and soft glow of the classic launcher; it travels with the focused tile.
         float inset = 6f;
         halo = new GlassView(getContext(), null);
         halo.setStyle(Config.GLASS_HALO);
@@ -100,6 +110,7 @@ final class ConsoleRow extends FrameLayout {
         addView(halo, hlp);
         int keep = was == null ? 0 : indexOfTitle(was.title);
         focus = keep < 0 ? 0 : Math.min(keep, Math.max(0, items.size() - 1));
+        moving = false;
         layoutCards(false);
         if (listener != null && !items.isEmpty()) listener.onFocused(items.get(focus));
     }
@@ -111,15 +122,53 @@ final class ConsoleRow extends FrameLayout {
 
     /** Back to the first card, the Home button's job. */
     void home() {
+        if (moving) endMove();
         if (focus == 0) return;
         focus = 0;
         layoutCards(true);
         if (listener != null && !items.isEmpty()) listener.onFocused(items.get(0));
     }
 
+    /** Picks the focused tile up: Left and Right carry it, OK or Back puts it down. */
+    void startMove() {
+        if (items.isEmpty() || items.get(focus).pkg == null) return;
+        moving = true;
+        layoutCards(true);
+    }
+
+    boolean isMoving() {
+        return moving;
+    }
+
+    private void endMove() {
+        moving = false;
+        layoutCards(true);
+        if (listener != null) listener.onReordered(new ArrayList<>(items));
+    }
+
+    private static boolean isOk(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
+                || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER;
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (items.isEmpty()) return super.onKeyDown(keyCode, event);
+        if (moving) {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                swap(focus, focus - 1);
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                swap(focus, focus + 1);
+                return true;
+            }
+            if (isOk(keyCode) || keyCode == KeyEvent.KEYCODE_BACK) {
+                endMove();
+                return true;
+            }
+            return true;   // up and down stay in the row while a tile is picked up
+        }
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 if (focus > 0) move(focus - 1);
@@ -127,14 +176,48 @@ final class ConsoleRow extends FrameLayout {
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 if (focus < items.size() - 1) move(focus + 1);
                 return true;
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_NUMPAD_ENTER:
-                if (listener != null) listener.onOpen(items.get(focus));
-                return true;
             default:
+                if (isOk(keyCode)) {
+                    // Opened on release, so holding OK can open the tile's menu instead.
+                    if (event.getRepeatCount() == 0) {
+                        event.startTracking();
+                        longPressed = false;
+                    }
+                    return true;
+                }
                 return super.onKeyDown(keyCode, event);
         }
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        if (isOk(keyCode) && !moving && !items.isEmpty()) {
+            longPressed = true;
+            if (listener != null) listener.onMenu(items.get(focus));
+            return true;
+        }
+        return super.onKeyLongPress(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (isOk(keyCode) && !moving) {
+            if (!longPressed && event.isTracking() && !event.isCanceled() && listener != null && !items.isEmpty()) {
+                listener.onOpen(items.get(focus));
+            }
+            longPressed = false;
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
+    }
+
+    /** Carries the picked-up tile one place left or right; the Continue watching card stays first. */
+    private void swap(int from, int to) {
+        if (to < 0 || to >= items.size() || items.get(to).pkg == null) return;
+        java.util.Collections.swap(items, from, to);
+        java.util.Collections.swap(cards, from, to);
+        focus = to;
+        layoutCards(true);
     }
 
     private void move(int to) {
@@ -149,17 +232,29 @@ final class ConsoleRow extends FrameLayout {
         layoutCards(true);
     }
 
-    /** Targets for every card: the focused one at the row's start, grown from its bottom-left corner. */
+    /**
+     * Targets for every card. Tiles keep their places and focus moves along them; the row scrolls only as far
+     * as it must to keep the focused tile inside the band, so nothing disappears to the left.
+     */
     private void layoutCards(boolean animate) {
         float step = px(CARD_W + GAP);
-        float grow = px(CARD_W) * (FOCUS_SCALE - 1f);
         boolean active = hasFocus() || isFocused();
-        if (halo != null) spring(halo, DynamicAnimation.ALPHA, active && !items.isEmpty() ? 1f : 0f, animate);
+        float focusScale = !active ? 1f : moving ? MOVE_SCALE : FOCUS_SCALE;
+        float grow = px(CARD_W) * (focusScale - 1f);
+        float focusLeft = focus * step;
+        float focusRight = focusLeft + px(CARD_W) * focusScale;
+        float width = getWidth() > 0 ? getWidth() : getResources().getDisplayMetrics().widthPixels;
+        offset = Math.max(Math.min(offset, focusLeft), focusRight - width);
+        offset = Math.max(0f, offset);
+        if (halo != null) {
+            spring(halo, DynamicAnimation.ALPHA, active && !moving && !items.isEmpty() ? 1f : 0f, animate);
+            spring(halo, DynamicAnimation.TRANSLATION_X, focusLeft - offset, animate);
+        }
         for (int j = 0; j < cards.size(); j++) {
             View c = cards.get(j);
-            float x = (j - focus) * step + (j > focus ? grow : 0f);
-            float scale = j == focus && active ? FOCUS_SCALE : 1f;
-            float alpha = j < focus ? 0f : 1f;
+            float x = j * step + (j > focus ? grow : 0f) - offset;
+            float scale = j == focus ? focusScale : 1f;
+            float alpha = 1f;
             c.setPivotX(0f);
             c.setPivotY(px(CARD_H) / 2f);
             spring(c, DynamicAnimation.TRANSLATION_X, x, animate);
@@ -170,7 +265,7 @@ final class ConsoleRow extends FrameLayout {
             if (details != null) {
                 spring(details, DynamicAnimation.ALPHA, j == focus ? 1f : 0f, animate);
             }
-            c.setElevation(j == focus ? px(10) : px(2));
+            c.setElevation(j == focus ? px(moving ? 18 : 10) : px(2));
         }
     }
 
