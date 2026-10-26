@@ -40,16 +40,18 @@ final class ConsoleRow extends FrameLayout {
 
     static final class Item {
         String title;
-        Drawable art;          // app banner, drawn fitted on bg
+        Drawable art;          // app banner, filling the tile (centre crop), as cleanyourtv draws it
+        Drawable icon;         // phone app with no banner: its icon centred over its name
         Bitmap poster;         // continue-watching art, drawn full bleed
         int bg = 0xFF1C1F26;
+        int accent = 0xFF5A6B8C;  // the ambient glow's colour while this card is focused
         boolean resume;        // the continue-watching card: percent, "In progress", Resume
         float progress;
         String source;
         Runnable open;
     }
 
-    static final float CARD_W = 128f, CARD_H = 130f, GAP = 29f, FOCUS_SCALE = 1.245f, RADIUS = 17f;
+    static final float CARD_W = 180f, CARD_H = 101f, GAP = 22f, FOCUS_SCALE = 1.10f, RADIUS = 16f;
     private static final float STIFFNESS = 420f, DAMPING = 0.92f;
 
     private final float density;
@@ -57,6 +59,7 @@ final class ConsoleRow extends FrameLayout {
     private final List<View> cards = new ArrayList<>();
     private int focus;
     private Listener listener;
+    private GlassView halo;
 
     ConsoleRow(Context ctx) {
         super(ctx);
@@ -85,9 +88,20 @@ final class ConsoleRow extends FrameLayout {
             cards.add(card);
             addView(card, new LayoutParams(px(CARD_W), px(CARD_H), Gravity.BOTTOM | Gravity.START));
         }
+        // The glass rim and soft glow of the classic launcher, fixed on the first slot where focus always sits.
+        float inset = 6f;
+        halo = new GlassView(getContext(), null);
+        halo.setStyle(Config.GLASS_HALO);
+        halo.setRadius(px(RADIUS) * FOCUS_SCALE);
+        LayoutParams hlp = new LayoutParams(px(CARD_W * FOCUS_SCALE + 2 * inset), px(CARD_H * FOCUS_SCALE + 2 * inset),
+                Gravity.BOTTOM | Gravity.START);
+        hlp.leftMargin = -px(inset);
+        hlp.bottomMargin = -px(inset);
+        addView(halo, hlp);
         int keep = was == null ? 0 : indexOfTitle(was.title);
         focus = keep < 0 ? 0 : Math.min(keep, Math.max(0, items.size() - 1));
         layoutCards(false);
+        if (listener != null && !items.isEmpty()) listener.onFocused(items.get(focus));
     }
 
     private int indexOfTitle(String title) {
@@ -140,10 +154,11 @@ final class ConsoleRow extends FrameLayout {
         float step = px(CARD_W + GAP);
         float grow = px(CARD_W) * (FOCUS_SCALE - 1f);
         boolean active = hasFocus() || isFocused();
+        if (halo != null) spring(halo, DynamicAnimation.ALPHA, active && !items.isEmpty() ? 1f : 0f, animate);
         for (int j = 0; j < cards.size(); j++) {
             View c = cards.get(j);
             float x = (j - focus) * step + (j > focus ? grow : 0f);
-            float scale = j == focus ? (active ? FOCUS_SCALE : 1.12f) : 1f;
+            float scale = j == focus && active ? FOCUS_SCALE : 1f;
             float alpha = j < focus ? 0f : 1f;
             c.setPivotX(0f);
             c.setPivotY(px(CARD_H));
@@ -205,9 +220,20 @@ final class ConsoleRow extends FrameLayout {
             card.addView(art, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         } else if (it.art != null) {
             ImageView art = new ImageView(ctx);
-            art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            art.setScaleType(ImageView.ScaleType.CENTER_CROP);
             art.setImageDrawable(it.art);
-            card.addView(art, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(CARD_W * 9f / 16f), Gravity.CENTER));
+            card.addView(art, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        } else if (it.icon != null) {
+            // cleanyourtv's icon tile: a 48 dp icon a little above centre, the app's name along the bottom.
+            ImageView ic = new ImageView(ctx);
+            ic.setImageDrawable(it.icon);
+            LayoutParams ilp = new LayoutParams(px(48), px(48), Gravity.CENTER);
+            ilp.bottomMargin = px(14);
+            card.addView(ic, ilp);
+            TextView name = text(ctx, it.title, 13, Typeface.NORMAL, Color.WHITE);
+            name.setGravity(Gravity.CENTER);
+            name.setPadding(px(10), 0, px(10), px(8));
+            card.addView(name, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
         } else {
             TextView name = text(ctx, it.title, 15, Typeface.BOLD, Color.WHITE);
             name.setGravity(Gravity.CENTER);

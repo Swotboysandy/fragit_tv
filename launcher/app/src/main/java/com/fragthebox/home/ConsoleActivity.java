@@ -68,6 +68,11 @@ public class ConsoleActivity extends Activity {
     private ImageView wallBack, wallFront;
     private ConsoleRow row;
     private LinearLayout bar;
+    private GlassPanel barGlass;
+    private GradientDrawable glow;
+    private int glowColor = 0xFF5A6B8C;
+    private android.animation.ValueAnimator glowAnim;
+    private TextView title;
     private FrameLayout sheet;
     private View netDot;
     private GitWallpapers wallpapers;
@@ -100,7 +105,11 @@ public class ConsoleActivity extends Activity {
         long hours = Math.max(1, getResources().getInteger(R.integer.wallpaper_rotate_hours));
         wallpapers = new GitWallpapers(this, getString(R.string.wallpaper_repo), getString(R.string.wallpaper_path),
                 hours * 60 * 60 * 1000L, dm.widthPixels, dm.heightPixels);
-        wallBack.setImageResource(R.drawable.console_default_wall);
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inPreferredConfig = Bitmap.Config.RGB_565;
+        Bitmap builtIn = android.graphics.BitmapFactory.decodeResource(getResources(), R.drawable.console_default_wall, o);
+        wallBack.setImageBitmap(builtIn);
+        GlassPanel.setBackdrop(builtIn, dm.widthPixels, dm.heightPixels);
 
         liveTvPkg = findLiveTvPackage();
         IntentFilter f = new IntentFilter();
@@ -159,6 +168,7 @@ public class ConsoleActivity extends Activity {
     private View buildLayout() {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
+        root.setClipChildren(false);
 
         wallBack = new ImageView(this);
         wallBack.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -167,6 +177,16 @@ public class ConsoleActivity extends Activity {
         wallFront.setScaleType(ImageView.ScaleType.CENTER_CROP);
         wallFront.setAlpha(0f);
         root.addView(wallFront, match());
+
+        // Ambient glow in the focused app's colour, the classic launcher's "top shelf" light.
+        glow = new GradientDrawable();
+        glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        glow.setGradientCenter(0.3f, 0.62f);
+        glow.setGradientRadius(getResources().getDisplayMetrics().widthPixels * 0.62f);
+        setGlow(glowColor);
+        View glowView = new View(this);
+        glowView.setBackground(glow);
+        root.addView(glowView, match());
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -196,36 +216,52 @@ public class ConsoleActivity extends Activity {
 
             @Override
             public void onFocused(ConsoleRow.Item item) {
+                showFocused(item);
             }
         });
-        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(170), Gravity.BOTTOM);
+
+        // The focused app's name in large type above the row, as in the classic top shelf.
+        title = new TextView(this);
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
+        title.setTypeface(getResources().getFont(R.font.outfit_light));
+        title.setSingleLine(true);
+        title.setShadowLayer(dp(12), 0, dp(2), 0x66000000);
+        FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START);
+        tlp.leftMargin = dp(86);
+        tlp.bottomMargin = dp(96 + 112 + 16);
+        root.addView(title, tlp);
+
+        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150), Gravity.BOTTOM);
         rlp.bottomMargin = dp(96);
         rlp.leftMargin = dp(86);
         root.addView(row, rlp);
 
+        // The bar: a frosted glass pill, as wide as the reference's and a little taller so the icons breathe.
         bar = buildBar();
-        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(440), dp(38), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        blp.bottomMargin = dp(26);
-        root.addView(bar, blp);
+        barGlass = new GlassPanel(this, 23, 0x330B0D12);
+        barGlass.addView(bar, match());
+        barGlass.setPadding(dp(8), 0, dp(8), 0);
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(470), dp(46), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        blp.bottomMargin = dp(22);
+        root.addView(barGlass, blp);
 
-        sheet = new FrameLayout(this);
-        GradientDrawable sbg = new GradientDrawable();
-        sbg.setColor(0xF2101318);
-        sbg.setCornerRadii(new float[]{dp(14), dp(14), dp(14), dp(14), 0, 0, 0, 0});
-        sheet.setBackground(sbg);
+        // Sheets float as a glass panel with margins on every side, not a slab glued to the screen's edge.
+        sheet = new GlassPanel(this, 26, 0x8C0B0D12);
         sheet.setVisibility(View.GONE);
-        sheet.setPadding(dp(86), dp(28), dp(86), dp(24));
-        root.addView(sheet, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330), Gravity.BOTTOM));
+        sheet.setPadding(dp(46), dp(30), dp(46), dp(24));
+        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(330), Gravity.BOTTOM);
+        slp.leftMargin = dp(40);
+        slp.rightMargin = dp(40);
+        slp.bottomMargin = dp(24);
+        root.addView(sheet, slp);
         return root;
     }
 
     private LinearLayout buildBar() {
         LinearLayout b = new LinearLayout(this);
         b.setOrientation(LinearLayout.HORIZONTAL);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xAD0B0D12);
-        bg.setCornerRadius(dp(8.5f));
-        b.setBackground(bg);
         addBarIcon(b, R.drawable.ic_bar_inputs, R.string.console_inputs, false, v -> openInputs());
         Intent music = musicApp();
         if (music != null) addBarIcon(b, R.drawable.ic_bar_music, R.string.console_music, false, v -> start(music));
@@ -260,15 +296,17 @@ public class ConsoleActivity extends Activity {
         View halo = new View(this);
         halo.setDuplicateParentStateEnabled(true);
         StateListDrawable states = new StateListDrawable();
-        states.addState(new int[]{android.R.attr.state_focused}, circle(0x4DFFFFFF));
-        states.addState(new int[]{}, circle(selected ? 0x29FFFFFF : 0x00FFFFFF));
+        GradientDrawable focusedHalo = circle(0x40FFFFFF);
+        focusedHalo.setStroke(Math.max(1, dp(0.8f)), 0xB3FFFFFF);
+        states.addState(new int[]{android.R.attr.state_focused}, focusedHalo);
+        states.addState(new int[]{}, circle(selected ? 0x26FFFFFF : 0x00FFFFFF));
         halo.setBackground(states);
-        cell.addView(halo, new FrameLayout.LayoutParams(dp(31), dp(31), Gravity.CENTER));
+        cell.addView(halo, new FrameLayout.LayoutParams(dp(36), dp(36), Gravity.CENTER));
 
         ImageView iv = new ImageView(this);
         iv.setImageResource(icon);
-        cell.addView(iv, new FrameLayout.LayoutParams(dp(icon == R.drawable.ic_bar_wifi ? 17 : 14),
-                dp(icon == R.drawable.ic_bar_wifi ? 17 : 14), Gravity.CENTER));
+        cell.addView(iv, new FrameLayout.LayoutParams(dp(icon == R.drawable.ic_bar_wifi ? 21 : 17),
+                dp(icon == R.drawable.ic_bar_wifi ? 21 : 17), Gravity.CENTER));
         if (icon == R.drawable.ic_bar_wifi) {
             View dot = new View(this);
             dot.setTag("dot");
@@ -276,8 +314,8 @@ public class ConsoleActivity extends Activity {
             g.setStroke(dp(1), 0xFF0B0D12);
             dot.setBackground(g);
             FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(6), dp(6), Gravity.CENTER);
-            dlp.leftMargin = dp(13);
-            dlp.topMargin = dp(13);
+            dlp.leftMargin = dp(15);
+            dlp.topMargin = dp(15);
             cell.addView(dot, dlp);
         }
         b.addView(cell, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
@@ -291,9 +329,37 @@ public class ConsoleActivity extends Activity {
         return g;
     }
 
+    // ---- focus: glow and title -----------------------------------------------------------------------
+
+    private void showFocused(ConsoleRow.Item item) {
+        if (glowAnim != null) glowAnim.cancel();
+        glowAnim = android.animation.ValueAnimator.ofObject(new android.animation.ArgbEvaluator(), glowColor, item.accent);
+        glowAnim.setDuration(450);
+        glowAnim.setInterpolator(new DecelerateInterpolator());
+        glowAnim.addUpdateListener(a -> setGlow((int) a.getAnimatedValue()));
+        glowAnim.start();
+
+        String name = item.title;
+        if (name.contentEquals(title.getText())) return;
+        title.animate().cancel();
+        title.animate().alpha(0f).translationY(dp(6)).setDuration(110).withEndAction(() -> {
+            title.setText(name);
+            title.setTranslationY(-dp(6));
+            title.animate().alpha(1f).translationY(0f).setDuration(260)
+                    .setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        }).start();
+    }
+
+    private void setGlow(int color) {
+        glowColor = color;
+        glow.setColors(new int[]{(color & 0x00FFFFFF) | 0x8C000000, (color & 0x00FFFFFF) | 0x26000000, 0x00000000});
+    }
+
     // ---- wallpaper ---------------------------------------------------------------------------------
 
     private void showWallpaper(Bitmap b) {
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        GlassPanel.setBackdrop(b, dm.widthPixels, dm.heightPixels);
         wallFront.setImageBitmap(b);
         wallFront.animate().cancel();
         wallFront.setAlpha(0f);
@@ -326,8 +392,10 @@ public class ConsoleActivity extends Activity {
                 for (AppInfo a : apps) {
                     ConsoleRow.Item it = new ConsoleRow.Item();
                     it.title = a.label;
-                    it.poster = a.card;
-                    it.bg = a.bg;
+                    if (a.tvBanner) it.art = a.banner;
+                    else it.icon = a.banner;
+                    it.bg = a.tvBanner ? a.bg : 0xFF1C1C1E;
+                    it.accent = a.accent;
                     it.open = () -> launch(a);
                     items.add(it);
                 }
@@ -340,12 +408,12 @@ public class ConsoleActivity extends Activity {
         String pkg, label;
         ComponentName component;
         Drawable banner;
-        Bitmap card;
-        int bg;
+        boolean tvBanner;
+        int bg, accent;
     }
 
-    /** Composed card art by package and install time, so a return to Home doesn't redraw every card. */
-    private static final java.util.Map<String, Bitmap> CARD_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Glow colour by package and install time, so a return to Home doesn't scan every banner again. */
+    private static final java.util.Map<String, Integer> ACCENT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static long updatedAt(PackageManager pm, String pkg) {
         try {
@@ -371,19 +439,18 @@ public class ConsoleActivity extends Activity {
             a.pkg = ai.packageName;
             a.label = String.valueOf(ri.loadLabel(pm));
             a.component = new ComponentName(ai.packageName, ai.name);
-            String key = ai.packageName + "@" + updatedAt(pm, ai.packageName);
-            Bitmap card = CARD_CACHE.get(key);
             Drawable banner = ai.loadBanner(pm);
             if (banner == null) banner = ai.applicationInfo.loadBanner(pm);
-            boolean tvBanner = banner != null;
+            a.tvBanner = banner != null;
             if (banner == null) banner = ri.loadIcon(pm);
-            if (card == null) {
-                card = tvBanner ? CardArt.banner(this, banner, dp(ConsoleRow.CARD_W), dp(ConsoleRow.CARD_H))
-                        : CardArt.icon(this, banner, a.label, dp(ConsoleRow.CARD_W), dp(ConsoleRow.CARD_H));
-                CARD_CACHE.put(key, card);
-            }
             a.banner = banner;
-            a.card = card;
+            String key = ai.packageName + "@" + updatedAt(pm, ai.packageName);
+            Integer accent = ACCENT_CACHE.get(key);
+            if (accent == null) {
+                accent = CardArt.accent(banner);
+                ACCENT_CACHE.put(key, accent);
+            }
+            a.accent = accent;
             a.bg = edgeColor(banner);
             apps.add(a);
         }
@@ -523,21 +590,23 @@ public class ConsoleActivity extends Activity {
         box.setOrientation(LinearLayout.VERTICAL);
         box.addView(sheetTitle(R.string.console_apps));
         GridLayout grid = new GridLayout(this);
-        grid.setColumnCount(6);
+        grid.setColumnCount(5);
         for (AppInfo a : loadApps()) {
             FrameLayout tile = outlinedFocus(new FrameLayout(this));
             tile.setPadding(dp(4), dp(4), dp(4), dp(4));
             ImageView iv = new ImageView(this);
-            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            iv.setImageBitmap(a.card);
+            iv.setScaleType(a.tvBanner ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.CENTER_INSIDE);
+            iv.setImageDrawable(a.banner);
+            iv.setBackgroundColor(a.tvBanner ? a.bg : 0xFF1C1C1E);
+            if (!a.tvBanner) iv.setPadding(dp(30), dp(14), dp(30), dp(14));
             iv.setOutlineProvider(new android.view.ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, android.graphics.Outline outline) {
-                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(13));
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(12));
                 }
             });
             iv.setClipToOutline(true);
-            tile.addView(iv, new FrameLayout.LayoutParams(dp(98), dp(100)));
+            tile.addView(iv, new FrameLayout.LayoutParams(dp(128), dp(72)));
             tile.setOnClickListener(v -> launch(a));
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
             lp.setMargins(0, 0, dp(14), dp(14));
@@ -618,7 +687,7 @@ public class ConsoleActivity extends Activity {
         sheet.removeAllViews();
         sheet.addView(content);
         sheetOpen = true;
-        for (View v : new View[]{row, bar}) {
+        for (View v : new View[]{row, barGlass, title}) {
             v.animate().cancel();
             v.animate().alpha(0f).translationY(-dp(12)).setDuration(250)
                     .setInterpolator(new DecelerateInterpolator(1.6f)).start();
@@ -626,7 +695,7 @@ public class ConsoleActivity extends Activity {
         row.setFocusable(false);
         setBarFocusable(false);
         sheet.setVisibility(View.VISIBLE);
-        sheet.setTranslationY(dp(330));
+        sheet.setTranslationY(dp(380));
         springY(sheet, 0f);
         sheet.post(() -> {
             View first = content.focusSearch(View.FOCUS_DOWN);
@@ -639,14 +708,14 @@ public class ConsoleActivity extends Activity {
     private void closeSheet() {
         if (!sheetOpen) return;
         sheetOpen = false;
-        SpringAnimation s = springY(sheet, dp(330));
+        SpringAnimation s = springY(sheet, dp(380));
         s.addEndListener((a, canceled, v, vel) -> {
             if (!sheetOpen) {
                 sheet.setVisibility(View.GONE);
                 sheet.removeAllViews();
             }
         });
-        for (View v : new View[]{row, bar}) {
+        for (View v : new View[]{row, barGlass, title}) {
             v.animate().cancel();
             v.animate().alpha(1f).translationY(0f).setDuration(280)
                     .setInterpolator(new DecelerateInterpolator(1.6f)).start();

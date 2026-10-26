@@ -105,6 +105,31 @@ final class CardArt {
         return out;
     }
 
+    /**
+     * The app's own colour for the ambient glow: the most vivid colour in its art (Netflix red, Prime blue),
+     * not the edge, which is often white. Grey art falls back to a cool slate.
+     */
+    static int accent(Drawable art) {
+        Bitmap b = render(art, 48, 27);
+        float best = 0f;
+        int color = 0xFF5A6B8C;
+        float[] hsv = new float[3];
+        for (int y = 0; y < 27; y++) {
+            for (int x = 0; x < 48; x++) {
+                int p = b.getPixel(x, y);
+                if (Color.alpha(p) < 160) continue;
+                Color.colorToHSV(p, hsv);
+                float score = hsv[1] * hsv[2];
+                if (score > best) {
+                    best = score;
+                    color = p | 0xFF000000;
+                }
+            }
+        }
+        b.recycle();
+        return best < 0.18f ? 0xFF5A6B8C : color;
+    }
+
     private static final class Edge {
         int color;
         boolean plain, transparent;
