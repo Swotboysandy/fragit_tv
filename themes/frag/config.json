@@ -18,5 +18,8 @@
   "focus_overshoot": false,
   "app_glow": true,
   "ambient_glow": true,
-  "advanced_effects": true
+  "advanced_effects": true,
+  "hidden_apps": [
+    "com.netflix"
+  ]
 }

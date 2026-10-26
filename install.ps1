@@ -14,7 +14,7 @@ param(
     [string]$Apk = ''
 )
 $ErrorActionPreference = 'Stop'
-$repo = 'Swotboysandy/frag_the_box'
+$repo = 'Swotboysandy/fragit_tv'
 $pkg = 'com.fragthebox.home'
 $here = $PSScriptRoot
 

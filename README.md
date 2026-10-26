@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost <tv ip> themes\
 3. Download this repository, unzip it and double-click **`install.bat`**, type the TV's IP, and press **Allow**
    on the TV.
 
-It installs the launcher from [Releases](https://github.com/Swotboysandy/frag_the_box/releases), makes it Home
+It installs the launcher from [Releases](https://github.com/Swotboysandy/fragit_tv/releases), makes it Home
 and pushes the frag theme. **Undo:** `uninstall.bat`.
 
 ## Remove the TV's ads and bloat (optional)

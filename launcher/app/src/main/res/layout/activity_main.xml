@@ -23,6 +23,14 @@
         android:visibility="gone"
         android:importantForAccessibility="no" />
 
+    <!-- frag: soft fade over the top 210dp, behind the clock and the top buttons. -->
+    <View
+        android:id="@+id/topFade"
+        android:layout_width="match_parent"
+        android:layout_height="210dp"
+        android:background="@drawable/top_fade"
+        android:importantForAccessibility="no" />
+
     <!-- frag: dark fade over the bottom 60 % of the screen, above the wallpaper and below the apps. -->
     <View
         android:id="@+id/bottomFade"
