@@ -23,6 +23,15 @@
         android:visibility="gone"
         android:importantForAccessibility="no" />
 
+    <!-- frag: dark fade over the bottom 60 % of the screen, above the wallpaper and below the apps. -->
+    <View
+        android:id="@+id/bottomFade"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="280dp"
+        android:background="@drawable/bottom_fade"
+        android:importantForAccessibility="no" />
+
     <!-- Ambient glow in the colour of the focused dock app. -->
     <View
         android:id="@+id/ambient"
@@ -271,6 +280,22 @@
                             android:fontFamily="@string/font_regular"
                             android:letterSpacing="0.14"
                             android:textAllCaps="true" />
+
+                        <!-- frag: weather from the network's location ("24°  ·  Clear  ·  Patna"). -->
+                        <TextView
+                            android:id="@+id/weather"
+                            android:gravity="left"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:textColor="#CCFFFFFF"
+                            android:textSize="14sp"
+                            android:fontFamily="@string/font_regular"
+                            android:letterSpacing="0.1"
+                            android:textAllCaps="true"
+                            android:visibility="gone" />
 
                         <!-- Lunar date ("Lunar 13/9 · Year of the Horse"), shown when lunar_date is on. -->
                         <TextView

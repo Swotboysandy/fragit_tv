@@ -15,6 +15,8 @@ so it is just as smooth; the look comes from cleanyourtv's own theme system, in 
 | Spider-Man wallpaper by default; the others in Launcher settings → Wallpaper | `wallpaper.jpg` + `wallpapers/` |
 | OLED focus: no rim, the focused tile lifts on a deep shadow | `glass_style: lift` (frag addition), `focus_overshoot: false` |
 | Apple-style glass dock and top buttons | `dock_glass` (frag: brighter pane, top sheen, light-catching rim) |
+| Weather under the date from the Wi-Fi's location ("22° · Clear · Patna") | frag addition (ipwho.is + Open-Meteo, cached 30 min) |
+| Dark fade up from the bottom so the apps sit on shadow | frag addition (`bottom_fade`) |
 | Brightness button at the top: Auto by time of day, 100–20 %, TV picture settings | frag addition (a dim layer over every app; the TV's real backlight stays in its Picture menu) |
 
 Change the look by editing `themes/frag/config.json` (every key is in cleanyourtv's

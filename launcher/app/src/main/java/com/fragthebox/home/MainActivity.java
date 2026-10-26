@@ -707,6 +707,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         findViewById(R.id.btnBrightness).setOnClickListener(v ->
                 startActivity(new Intent(this, BrightnessActivity.class)));
         BrightnessService.update(this);
+        TextView weather = findViewById(R.id.weather);
+        Weather.load(this, line -> {
+            weather.setText(line);
+            weather.setVisibility(View.VISIBLE);
+        });
         View btnSettings = findViewById(R.id.btnSettings);
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
@@ -943,6 +948,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        // frag: the weather line refreshes on return to Home once its 30 minute cache is stale.
+        TextView weatherLine = findViewById(R.id.weather);
+        if (weatherLine != null) Weather.load(this, line -> {
+            weatherLine.setText(line);
+            weatherLine.setVisibility(View.VISIBLE);
+        });
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
