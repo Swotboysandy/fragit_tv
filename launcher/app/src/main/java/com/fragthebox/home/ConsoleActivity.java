@@ -69,13 +69,17 @@ public class ConsoleActivity extends Activity {
     private ConsoleRow row;
     private LinearLayout bar;
     private GlassPanel barGlass;
+    private GlassPanel band;
+    /** The band: 12 dp around the focused tile (101 dp at 1.10x), 88 dp above the screen's bottom. */
+    private static final float BAND_PAD = 12f, BAND_H = 111f + 2 * 12f, BAND_BOTTOM = 88f;
     private View homeCell;
     private GradientDrawable glow;
     private int glowColor = 0xFF5A6B8C;
     private android.animation.ValueAnimator glowAnim;
     private TextView title;
     private FrameLayout sheet;
-    private View netDot;
+    private MorphIconView wifiIcon, btIcon;
+    private ConnectivityManager.NetworkCallback netCallback;
     private GitWallpapers wallpapers;
     private String liveTvPkg = "";
     private boolean sheetOpen;
@@ -85,6 +89,7 @@ public class ConsoleActivity extends Activity {
         @Override
         public void run() {
             wallpapers.load(ConsoleActivity.this::showWallpaper);
+            refreshMood();
             main.postDelayed(this, ROTATE_CHECK_MS);
         }
     };
@@ -118,6 +123,22 @@ public class ConsoleActivity extends Activity {
         f.addAction(Intent.ACTION_PACKAGE_CHANGED);
         f.addDataScheme("package");
         registerReceiver(packages, f);
+        registerReceiver(bluetooth, new IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED));
+        ConnectivityManager cm = getSystemService(ConnectivityManager.class);
+        if (cm != null) {
+            netCallback = new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onAvailable(android.net.Network n) {
+                    main.post(ConsoleActivity.this::refreshNetwork);
+                }
+
+                @Override
+                public void onLost(android.net.Network n) {
+                    main.postDelayed(ConsoleActivity.this::refreshNetwork, 300);
+                }
+            };
+            cm.registerDefaultNetworkCallback(netCallback);
+        }
         refreshRow();
         row.requestFocus();
     }
@@ -125,6 +146,9 @@ public class ConsoleActivity extends Activity {
     @Override
     protected void onDestroy() {
         unregisterReceiver(packages);
+        unregisterReceiver(bluetooth);
+        ConnectivityManager cm = getSystemService(ConnectivityManager.class);
+        if (cm != null && netCallback != null) cm.unregisterNetworkCallback(netCallback);
         super.onDestroy();
     }
 
@@ -193,19 +217,21 @@ public class ConsoleActivity extends Activity {
                 new int[]{0x00000000, 0x00000000, 0x8C000000}));
         root.addView(shade, match());
 
-        TextClock clock = new TextClock(this);
-        clock.setFormat12Hour("h:mm a");
-        clock.setFormat24Hour("h:mm a");
-        clock.setTextColor(Color.WHITE);
-        clock.setAllCaps(true);
-        clock.setShadowLayer(dp(8), 0, dp(1), 0x8C000000);   // readable over a bright wallpaper
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.5f);
-        clock.setTypeface(getResources().getFont(R.font.outfit_regular));
+        // The clock large and thin at the top left, AM/PM small beside it.
+        LinearLayout clockBox = new LinearLayout(this);
+        clockBox.setOrientation(LinearLayout.HORIZONTAL);
+        clockBox.setGravity(Gravity.BOTTOM);
+        TextClock time = clockText("h:mm", 50, R.font.outfit_extralight);
+        TextClock ampm = clockText("a", 13, R.font.outfit_medium);
+        ampm.setAllCaps(true);
+        ampm.setPadding(dp(6), 0, 0, dp(9));
+        clockBox.addView(time);
+        clockBox.addView(ampm);
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
-        clp.topMargin = dp(32);
-        clp.rightMargin = dp(60);
-        root.addView(clock, clp);
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
+        clp.topMargin = dp(26);
+        clp.leftMargin = dp(60);
+        root.addView(clockBox, clp);
 
         row = new ConsoleRow(this);
         row.setId(View.generateViewId());
@@ -221,23 +247,47 @@ public class ConsoleActivity extends Activity {
             }
         });
 
-        // The focused app's name in large type above the row, as in the classic top shelf.
+        // One line of serif text above the row that changes with the time of day.
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
-        title.setTypeface(getResources().getFont(R.font.outfit_light));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 27);
+        title.setTypeface(getResources().getFont(R.font.newsreader_serif));
         title.setSingleLine(true);
-        title.setShadowLayer(dp(12), 0, dp(2), 0x66000000);
+        title.setShadowLayer(dp(14), 0, dp(1), 0x59000000);
+        title.setText(MoodLine.now());
         FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START);
-        tlp.leftMargin = dp(86);
-        tlp.bottomMargin = dp(96 + 112 + 16);
+        tlp.leftMargin = dp(72);
+        tlp.bottomMargin = dp(BAND_BOTTOM + BAND_H + 14);
         root.addView(title, tlp);
 
-        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150), Gravity.BOTTOM);
-        rlp.bottomMargin = dp(96);
-        rlp.leftMargin = dp(86);
-        root.addView(row, rlp);
+        // The matte band: the row sits inside it and slides under its rounded ends.
+        band = new GlassPanel(this, ConsoleRow.RADIUS + BAND_PAD, GlassPanel.MATTE);
+        band.setClipToOutline(true);
+        band.setPadding(dp(BAND_PAD), dp(BAND_PAD), dp(BAND_PAD), dp(BAND_PAD));
+        band.addView(row, match());
+        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(BAND_H), Gravity.BOTTOM);
+        rlp.bottomMargin = dp(BAND_BOTTOM);
+        rlp.leftMargin = dp(60);
+        rlp.rightMargin = dp(60);
+        root.addView(band, rlp);
+
+        // Round glass buttons at the top right: Wi-Fi and Bluetooth show their state and morph when it changes.
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        wifiIcon = new MorphIconView(this);
+        topButton(top, wifiIcon, LucideIcons.WIFI, R.string.console_network,
+                v -> start(new Intent(Settings.ACTION_WIFI_SETTINGS)));
+        btIcon = new MorphIconView(this);
+        topButton(top, btIcon, bluetoothOn() ? LucideIcons.BLUETOOTH : LucideIcons.BLUETOOTH_OFF,
+                R.string.console_bluetooth, v -> start(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)));
+        topButton(top, new MorphIconView(this), LucideIcons.SETTINGS, R.string.console_settings,
+                v -> start(new Intent(Settings.ACTION_SETTINGS)));
+        FrameLayout.LayoutParams toplp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
+        toplp.topMargin = dp(38);
+        toplp.rightMargin = dp(60);
+        root.addView(top, toplp);
 
         // The bar: a frosted glass pill, as wide as the reference's and a little taller so the icons breathe.
         bar = buildBar();
@@ -270,27 +320,24 @@ public class ConsoleActivity extends Activity {
     private LinearLayout buildBar() {
         LinearLayout b = new LinearLayout(this);
         b.setOrientation(LinearLayout.HORIZONTAL);
-        addBarIcon(b, R.drawable.ic_bar_inputs, R.string.console_inputs, false, v -> openInputs());
+        addBarIcon(b, LucideIcons.TV, R.string.console_inputs, v -> openInputs());
         Intent music = musicApp();
-        if (music != null) addBarIcon(b, R.drawable.ic_bar_music, R.string.console_music, false, v -> start(music));
+        if (music != null) addBarIcon(b, LucideIcons.HEADPHONES, R.string.console_music, v -> start(music));
         Intent notifications = notificationsPanel();
         if (notifications != null) {
-            addBarIcon(b, R.drawable.ic_bar_bell, R.string.console_notifications, false, v -> start(notifications));
+            addBarIcon(b, LucideIcons.BELL, R.string.console_notifications, v -> start(notifications));
         }
-        View home = homeCell = addBarIcon(b, R.drawable.ic_bar_home, R.string.console_home, true, v -> {
+        View home = homeCell = addBarIcon(b, LucideIcons.HOUSE, R.string.console_home, v -> {
             row.home();
             row.requestFocus();
         });
-        addBarIcon(b, R.drawable.ic_bar_apps, R.string.console_apps, false, v -> openApps());
-        View net = addBarIcon(b, R.drawable.ic_bar_wifi, R.string.console_network, false,
-                v -> start(new Intent(Settings.ACTION_WIFI_SETTINGS)));
-        netDot = net.findViewWithTag("dot");
-        addBarIcon(b, R.drawable.ic_bar_power, R.string.console_power, false, v -> openPower());
+        addBarIcon(b, LucideIcons.LAYOUT_GRID, R.string.console_apps, v -> openApps());
+        addBarIcon(b, LucideIcons.POWER, R.string.console_power, v -> openPower());
         row.setNextFocusDownId(home.getId());
         return b;
     }
 
-    private View addBarIcon(LinearLayout b, int icon, int label, boolean selected, View.OnClickListener click) {
+    private View addBarIcon(LinearLayout b, String[] icon, int label, View.OnClickListener click) {
         FrameLayout cell = new FrameLayout(this);
         cell.setId(View.generateViewId());
         cell.setFocusable(true);
@@ -301,26 +348,68 @@ public class ConsoleActivity extends Activity {
             if (has) lastBarFocus = v;
         });
 
-        ImageView iv = new ImageView(this);
-        iv.setImageResource(icon);
+        MorphIconView iv = new MorphIconView(this);
+        iv.setIcon(icon, false);
         iv.setDuplicateParentStateEnabled(true);
-        if (icon != R.drawable.ic_bar_wifi) iv.setImageTintList(onPill());
-        cell.addView(iv, new FrameLayout.LayoutParams(dp(icon == R.drawable.ic_bar_wifi ? 21 : 17),
-                dp(icon == R.drawable.ic_bar_wifi ? 21 : 17), Gravity.CENTER));
-        if (icon == R.drawable.ic_bar_wifi) {
-            View dot = new View(this);
-            dot.setTag("dot");
-            GradientDrawable g = circle(0xFF3DDC84);
-            g.setStroke(dp(1), 0xFF0B0D12);
-            dot.setBackground(g);
-            FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(6), dp(6), Gravity.CENTER);
-            dlp.leftMargin = dp(15);
-            dlp.topMargin = dp(15);
-            cell.addView(dot, dlp);
-        }
+        iv.setTint(onPill());
+        cell.addView(iv, new FrameLayout.LayoutParams(dp(19), dp(19), Gravity.CENTER));
         b.addView(cell, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
         return cell;
     }
+
+    /** A round glass button for the top right: pill_bg's glass at rest, the white pill while focused. */
+    private View topButton(LinearLayout parent, MorphIconView icon, String[] shape, int label, View.OnClickListener click) {
+        FrameLayout b = new FrameLayout(this);
+        b.setId(View.generateViewId());
+        b.setFocusable(true);
+        b.setContentDescription(getString(label));
+        b.setOnClickListener(click);
+        StateListDrawable bg = new StateListDrawable();
+        bg.addState(new int[]{android.R.attr.state_focused}, circle(0xF5FFFFFF));
+        GradientDrawable rest = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x2EFFFFFF, 0x14FFFFFF});
+        rest.setShape(GradientDrawable.OVAL);
+        rest.setStroke(dp(1), 0x38FFFFFF);
+        bg.addState(new int[]{}, rest);
+        b.setBackground(bg);
+        icon.setIcon(shape, false);
+        icon.setDuplicateParentStateEnabled(true);
+        icon.setTint(onPill());
+        b.addView(icon, new FrameLayout.LayoutParams(dp(17), dp(17), Gravity.CENTER));
+        b.setNextFocusDownId(row.getId());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(38), dp(38));
+        if (parent.getChildCount() > 0) lp.leftMargin = dp(10);
+        parent.addView(b, lp);
+        if (parent.getChildCount() == 1) row.setNextFocusUpId(b.getId());
+        return b;
+    }
+
+    private TextClock clockText(String format, float sp, int font) {
+        TextClock t = new TextClock(this);
+        t.setFormat12Hour(format);
+        t.setFormat24Hour(format);
+        t.setTextColor(Color.WHITE);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        t.setTypeface(getResources().getFont(font));
+        t.setIncludeFontPadding(false);
+        t.setShadowLayer(dp(10), 0, dp(1), 0x66000000);   // readable over a bright wallpaper
+        return t;
+    }
+
+    private boolean bluetoothOn() {
+        try {
+            android.bluetooth.BluetoothAdapter a = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            return a != null && a.isEnabled();
+        } catch (SecurityException e) {
+            return true;
+        }
+    }
+
+    private final BroadcastReceiver bluetooth = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            btIcon.setIcon(bluetoothOn() ? LucideIcons.BLUETOOTH : LucideIcons.BLUETOOTH_OFF, true);
+        }
+    };
 
     private GradientDrawable circle(int color) {
         GradientDrawable g = new GradientDrawable();
@@ -339,14 +428,16 @@ public class ConsoleActivity extends Activity {
         glowAnim.addUpdateListener(a -> setGlow((int) a.getAnimatedValue()));
         glowAnim.start();
 
-        String name = item.title;
-        if (name.contentEquals(title.getText())) return;
+    }
+
+    /** The serif line, changed with a soft fade when the time of day moves on. */
+    private void refreshMood() {
+        String line = MoodLine.now();
+        if (line.contentEquals(title.getText())) return;
         title.animate().cancel();
-        title.animate().alpha(0f).translationY(dp(6)).setDuration(110).withEndAction(() -> {
-            title.setText(name);
-            title.setTranslationY(-dp(6));
-            title.animate().alpha(1f).translationY(0f).setDuration(260)
-                    .setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        title.animate().alpha(0f).setDuration(220).withEndAction(() -> {
+            title.setText(line);
+            title.animate().alpha(1f).setDuration(420).setInterpolator(new DecelerateInterpolator()).start();
         }).start();
     }
 
@@ -530,7 +621,7 @@ public class ConsoleActivity extends Activity {
             NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
             online = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         }
-        if (netDot != null) netDot.setVisibility(online ? View.VISIBLE : View.INVISIBLE);
+        wifiIcon.setIcon(online ? LucideIcons.WIFI : LucideIcons.WIFI_OFF, true);
     }
 
     private String findLiveTvPackage() {
@@ -696,7 +787,7 @@ public class ConsoleActivity extends Activity {
         if (content instanceof ViewGroup) pill.follow((ViewGroup) content);
         sheet.addView(holder);
         sheetOpen = true;
-        for (View v : new View[]{row, barGlass, title}) {
+        for (View v : new View[]{band, barGlass, title}) {
             v.animate().cancel();
             v.animate().alpha(0f).translationY(-dp(12)).setDuration(250)
                     .setInterpolator(new DecelerateInterpolator(1.6f)).start();
@@ -724,7 +815,7 @@ public class ConsoleActivity extends Activity {
                 sheet.removeAllViews();
             }
         });
-        for (View v : new View[]{row, barGlass, title}) {
+        for (View v : new View[]{band, barGlass, title}) {
             v.animate().cancel();
             v.animate().alpha(1f).translationY(0f).setDuration(280)
                     .setInterpolator(new DecelerateInterpolator(1.6f)).start();

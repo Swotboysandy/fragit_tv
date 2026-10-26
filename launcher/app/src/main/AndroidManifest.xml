@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Continue watching rows from the TV provider (ContinueWatching); granted with pm grant by the installer. -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- Console home: the Bluetooth button shows whether Bluetooth is on (state only, no scanning). -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with

@@ -23,12 +23,14 @@ and makes it the Home screen. Switch USB debugging off afterwards to close port 
 | Part | What it does |
 |---|---|
 | Wallpaper | Every picture in this repo's [`wallpapers/`](wallpapers) folder, a new one every 6 hours. Add or remove pictures there and every TV picks them up. |
-| First card | Continue watching: the newest unfinished title any app published to Android TV, with its progress and **Resume**. OK plays it in that app. |
-| Other cards | Your TV apps. Apps with a TV banner fill their card; phone-only apps get a tinted card with their icon and name. |
-| Bar | Inputs (HDMI, AV, Live TV) · Music (when a music app is installed) · Notifications (where the TV has a panel) · Home · All apps · Network (green dot while online) · Power |
+| Clock and line | A large thin clock at the top left, and one serif line above the row that changes with the time of day. |
+| Top right | Round glass buttons for Wi-Fi, Bluetooth and Settings. The Wi-Fi and Bluetooth icons morph to their "off" shape when the connection drops or Bluetooth is turned off. |
+| Row | Your TV apps as 16:9 banner tiles in a matte glass band; the focused tile zooms and tints the ambient glow in its colour. A Continue watching tile (progress and **Resume**) comes first when an app publishes one to Android TV. |
+| Bar | Inputs (HDMI, AV, Live TV) · Music (when a music app is installed) · Notifications (where the TV has a panel) · Home · All apps · Power |
 
-Motion runs on native Android springs (`androidx.dynamicanimation`), with no overshoot. Inputs, All apps
-and Power open as a sheet that rises from the bottom while the row slides up and fades.
+Motion runs on native Android springs (`androidx.dynamicanimation`). Focus is one white pill that glides
+between items; icons morph point by point between shapes, the way Morphicons does on the web. Inputs,
+All apps and Power open as a sheet that rises from the bottom while the row slides up and fades.
 
 ## Build it yourself
 
@@ -53,5 +55,6 @@ uninstalled, and `tools/restore.ps1` with the same list undoes it.
 ## Credits
 
 Built on the launcher, tools and TV lists of [cleanyourtv](https://github.com/Gathin23/cleanyourtv) by Gathin
-(MIT). The starter wallpaper is cleanyourtv's code-drawn "ruska" picture. The Outfit font is under the SIL
-Open Font License (`launcher/FONT-LICENSE-OFL.txt`).
+(MIT). The starter wallpaper is cleanyourtv's code-drawn "ruska" picture. Icons are from
+[Lucide](https://lucide.dev) (ISC, `launcher/LUCIDE-LICENSE.txt`). The Outfit and Newsreader fonts are under
+the SIL Open Font License (`launcher/FONT-LICENSE-OFL.txt`, `launcher/FONT-LICENSE-NEWSREADER-OFL.txt`).

@@ -86,7 +86,7 @@ final class ConsoleRow extends FrameLayout {
         for (Item it : items) {
             View card = buildCard(it);
             cards.add(card);
-            addView(card, new LayoutParams(px(CARD_W), px(CARD_H), Gravity.BOTTOM | Gravity.START));
+            addView(card, new LayoutParams(px(CARD_W), px(CARD_H), Gravity.CENTER_VERTICAL | Gravity.START));
         }
         // The glass rim and soft glow of the classic launcher, fixed on the first slot where focus always sits.
         float inset = 6f;
@@ -94,9 +94,9 @@ final class ConsoleRow extends FrameLayout {
         halo.setStyle(Config.GLASS_HALO);
         halo.setRadius(px(RADIUS) * FOCUS_SCALE);
         LayoutParams hlp = new LayoutParams(px(CARD_W * FOCUS_SCALE + 2 * inset), px(CARD_H * FOCUS_SCALE + 2 * inset),
-                Gravity.BOTTOM | Gravity.START);
+                Gravity.CENTER_VERTICAL | Gravity.START);
+        // Centred on the focused tile, which grows from its own centre-left inside the band.
         hlp.leftMargin = -px(inset);
-        hlp.bottomMargin = -px(inset);
         addView(halo, hlp);
         int keep = was == null ? 0 : indexOfTitle(was.title);
         focus = keep < 0 ? 0 : Math.min(keep, Math.max(0, items.size() - 1));
@@ -161,7 +161,7 @@ final class ConsoleRow extends FrameLayout {
             float scale = j == focus && active ? FOCUS_SCALE : 1f;
             float alpha = j < focus ? 0f : 1f;
             c.setPivotX(0f);
-            c.setPivotY(px(CARD_H));
+            c.setPivotY(px(CARD_H) / 2f);
             spring(c, DynamicAnimation.TRANSLATION_X, x, animate);
             spring(c, DynamicAnimation.SCALE_X, scale, animate);
             spring(c, DynamicAnimation.SCALE_Y, scale, animate);

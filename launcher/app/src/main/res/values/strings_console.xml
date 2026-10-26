@@ -13,4 +13,5 @@
     <string name="console_screensaver">Screensaver</string>
     <string name="console_settings">TV settings</string>
     <string name="console_live_tv">Live TV</string>
+    <string name="console_bluetooth">Bluetooth</string>
 </resources>

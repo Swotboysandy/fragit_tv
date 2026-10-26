@@ -43,6 +43,8 @@ android {
 dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    // PathParser: Lucide's SVG path data into android.graphics.Path for MorphIconView.
+    implementation 'androidx.core:core:1.13.1'
     // Test only (never in the APK): plain JVM tests for the module card validators, src/test.
     testImplementation 'junit:junit:4.13.2'
 }
