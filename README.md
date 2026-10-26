@@ -28,7 +28,7 @@ Taken on the TV itself (TCL UnionTV, Android TV 9), one per wallpaper in the the
 | Hold OK on a tile to move it or take it off Home; App library for the rest | `tile_menu`, `app_library` |
 | Spider-Man wallpaper by default; the others in Launcher settings → Wallpaper | `wallpaper.jpg` + `wallpapers/` |
 | OLED focus: no rim, the focused tile lifts on a deep shadow | `glass_style: lift` (frag addition), `focus_overshoot: false` |
-| Apple-style glass dock and top buttons | `dock_glass` (frag: brighter pane, top sheen, light-catching rim) |
+| iOS "Clear" glass dock: the picture seen through clear glass, bending at the rim with a colour fringe | `dock_glass` (frag: `ClearGlass`, pre-rendered once per wallpaper because Android 9 has no live shaders) |
 | Weather under the date from the Wi-Fi's location ("22° · Clear · Patna") | frag addition (ipwho.is + Open-Meteo, cached 30 min) |
 | Dark fade up from the bottom so the apps sit on shadow | frag addition (`bottom_fade`) |
 | Brightness button at the top: Auto by time of day, 100–20 %, TV picture settings | frag addition (a dim layer over every app; the TV's real backlight stays in its Picture menu) |
