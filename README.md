@@ -4,6 +4,20 @@ The [cleanyourtv](https://github.com/Gathin23/cleanyourtv) home screen for Andro
 underneath, in my own style. The launcher in `launcher/` is cleanyourtv's (renamed to `com.fragthebox.home`),
 so it is just as smooth; the look comes from cleanyourtv's own theme system, in [`themes/frag`](themes/frag).
 
+![frag_the_box on a TCL TV with the Spider-Man wallpaper](docs/screenshots/home-05-spider-venom.jpg)
+
+## Screenshots
+
+Taken on the TV itself (TCL UnionTV, Android TV 9), one per wallpaper in the theme:
+
+![All five wallpapers](docs/screenshots/overview.jpg)
+
+| | |
+|---|---|
+| ![Valley](docs/screenshots/home-02-valley-river.jpg) | ![Pink cloud](docs/screenshots/home-03-pink-cloud.jpg) |
+| ![Fjord](docs/screenshots/home-04-fjord-dusk.jpg) | ![Autumn lake](docs/screenshots/home-01-ruska-dusk.jpg) |
+| ![Brightness panel](docs/screenshots/brightness.jpg) | |
+
 ## The frag style
 
 | Part | Theme setting |
