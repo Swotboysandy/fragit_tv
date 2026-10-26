@@ -204,7 +204,7 @@ def main(argv=None):
     try:
         home = shell("cmd package resolve-activity --brief -a android.intent.action.MAIN "
                      f"-c android.intent.category.HOME {args.package}").strip().splitlines()
-        launcher = home[-1].strip() if home and "/" in home[-1] else f"{args.package}/.ConsoleActivity"
+        launcher = home[-1].strip() if home and "/" in home[-1] else f"{args.package}/.MainActivity"
         other = args.app
         if args.scenario in ("cold", "home") and not other:
             other = other_app(shell, args.package)

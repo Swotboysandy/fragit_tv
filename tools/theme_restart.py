@@ -110,7 +110,7 @@ def restart(dev, pause=time.sleep):
         if home.splitlines()[-1:] and home.splitlines()[-1].startswith(PACKAGE + "/"):
             start = "-a android.intent.action.MAIN -c android.intent.category.HOME"
         else:
-            start = "-n " + PACKAGE + "/.ConsoleActivity"
+            start = "-n " + PACKAGE + "/.MainActivity"
         shell(dev, f"am start --user {user} {start}")
         if not helpers:
             return

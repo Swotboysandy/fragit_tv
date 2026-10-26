@@ -72,19 +72,19 @@ if ($LASTEXITCODE -ne 0 -or "$out" -notmatch 'Success') { throw 'pm install fail
 's=$(settings get secure enabled_accessibility_services); a=$(settings get secure accessibility_enabled); am force-stop com.fragthebox.home; case "$s" in *com.fragthebox.home*) settings put secure enabled_accessibility_services ""; settings put secure enabled_accessibility_services "$s"; settings put secure accessibility_enabled "$a" ;; esac' |
     & $py -I ..\tools\tv.py --batch | Out-Null
 # Android 9 only accepts a component here; Android 10+ also takes a bare package name.
-$out = & $py -I ..\tools\tv.py 'cmd package set-home-activity --user 0 com.fragthebox.home/.ConsoleActivity'
+$out = & $py -I ..\tools\tv.py 'cmd package set-home-activity --user 0 com.fragthebox.home/.MainActivity'
 Write-Host $out
 if ($LASTEXITCODE -ne 0 -or "$out" -match 'Error') { throw 'could not set the new launcher as home; the stock launcher was left untouched' }
 # Start the launcher on its own, before the stock Home is touched (see build-and-install.sh, #239):
 # in the batch a failed start only prints an Error line and the stock launcher would be disabled anyway.
-$start = (& $py -I ..\tools\tv.py 'am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n com.fragthebox.home/.ConsoleActivity') -join "`n"
+$start = (& $py -I ..\tools\tv.py 'am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n com.fragthebox.home/.MainActivity') -join "`n"
 Write-Host $start
 if ($LASTEXITCODE -ne 0 -or $start -notmatch 'Status: ok' -or $start -match '(?m)^Error') { throw "the new launcher did not start (see above); $StockLauncher was left enabled" }
 @(
     'pm grant com.fragthebox.home android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted',
     'cmd package compile -m speed -f com.fragthebox.home',
     $disableStock,
-    'cmd package set-home-activity --user 0 com.fragthebox.home/.ConsoleActivity'
+    'cmd package set-home-activity --user 0 com.fragthebox.home/.MainActivity'
 ) | & $py -I ..\tools\tv.py --batch
 # A failed batch is not fatal here: the stock launcher may already be disabled, so fall through to the
 # Home check, which rolls back when Home is not ours.

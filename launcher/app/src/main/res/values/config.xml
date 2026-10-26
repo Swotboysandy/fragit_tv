@@ -468,28 +468,4 @@
          faint outer glow), rim (the crisp rim alone, no sheen, fill or glow, for a quiet focus over a wallpaper) or
          halo (the rim with a lighter outer glow). Can also be set with "glass_style": "rim" in a theme's config.json. -->
     <string name="glass_style" translatable="false">glass</string>
-
-    <!-- Console home wallpapers: a folder of a public GitHub repo, owner/name and path. Every picture
-         (jpg, png, webp) in it is shown in turn, a new one every wallpaper_rotate_hours. Empty repo: the
-         built-in picture only. -->
-    <string name="wallpaper_repo" translatable="false">Swotboysandy/frag_the_box</string>
-    <string name="wallpaper_path" translatable="false">wallpapers</string>
-    <integer name="wallpaper_rotate_hours">1</integer>
-    <!-- The console home's row until the owner edits it (hold OK on a tile, or in All apps): these apps, in this
-         order, where installed. Everything else is in All apps. -->
-    <string-array name="home_apps" translatable="false">
-        <item>com.netflix.ninja</item>
-        <item>com.amazon.amazonvideo.livingroom</item>
-        <item>com.google.android.youtube.tv</item>
-        <item>in.startv.hotstar</item>
-        <item>com.olivertv</item>
-    </string-array>
-    <!-- The Music icon opens the first of these that is installed; with none, the icon is left out. -->
-    <string-array name="music_apps" translatable="false">
-        <item>com.google.android.youtube.tvmusic</item>
-        <item>com.spotify.tv.android</item>
-        <item>com.apple.android.music</item>
-        <item>com.jio.media.jiobeats</item>
-        <item>com.gaana</item>
-    </string-array>
 </resources>

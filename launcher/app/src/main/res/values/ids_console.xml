@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- View tags that hold each view's running spring, so a new target retargets it instead of stacking a second one. -->
-<resources>
-    <item name="spring_tx" type="id" />
-    <item name="spring_sx" type="id" />
-    <item name="spring_sy" type="id" />
-    <item name="spring_alpha" type="id" />
-    <item name="spring_ty" type="id" />
-</resources>

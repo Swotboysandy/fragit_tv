@@ -1,4 +1,4 @@
-# frag_the_box one-click installer (Windows). Puts the console home screen on an Android TV / Google TV
+# frag_the_box one-click installer (Windows). Puts the cleanyourtv launcher, in the frag style, on an Android TV / Google TV
 # over Wi-Fi: no root, no cable, nothing uninstalled. Run it with install.bat, or:
 #   powershell -ExecutionPolicy Bypass -File install.ps1 [-TvHost 192.168.1.50] [-Apk path\to\app.apk]
 #
@@ -7,6 +7,7 @@
 #   2. connects to the TV on port 5555 (accept "Allow USB debugging?" on the TV)
 #   3. saves the TV's package list and Home app to .\backup\<ip>-<time>\
 #   4. installs the launcher (the newest GitHub release, or -Apk) and makes it Home
+#   5. pushes the frag theme (themesrag: wallpapers, glass dock, icon buttons, dock apps)
 # Undo: run uninstall.bat, or `adb uninstall com.fragthebox.home`; Android falls back to the TV's own Home.
 param(
     [string]$TvHost = '',
@@ -80,15 +81,28 @@ Step "Installing $(Split-Path $Apk -Leaf)"
 $out = (& $adb -s $target install -r $Apk) -join "`n"
 Write-Host $out
 if ($out -notmatch 'Success') { throw 'Install failed; the TV was left as it was.' }
-Tv "pm grant $pkg android.permission.READ_TV_LISTINGS" | Out-Null
 Tv "pm grant $pkg android.permission.ACCESS_FINE_LOCATION" | Out-Null
-$set = Tv "cmd package set-home-activity --user 0 $pkg/.ConsoleActivity"
-$start = Tv "am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n $pkg/.ConsoleActivity"
+$set = Tv "cmd package set-home-activity --user 0 $pkg/.MainActivity"
+$start = Tv "am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n $pkg/.MainActivity"
 $homeNow = (Tv 'cmd package resolve-activity --brief -c android.intent.category.HOME -a android.intent.action.MAIN').Trim().Split("`n")[-1]
 if ($homeNow -notlike "$pkg/*") {
     Write-Warning "Home still resolves to '$homeNow'. Press Home on the remote and pick frag_the_box, Always."
 } else {
     Write-Host "`nDone. Home is now frag_the_box (was $homeBefore)." -ForegroundColor Green
 }
-Write-Host 'Wallpapers come from the wallpapers folder of github.com/Swotboysandy/frag_the_box.'
+# 5. the frag theme: wallpapers, glass dock, icon buttons, dock apps (themes\frag). Pushed with the
+# launcher's own theme tool, which needs Python 3 for its adb helper.
+Step 'Putting the frag theme on the TV'
+$venvPy = Join-Path $here 'tools\venv\Scripts\python.exe'
+if (-not (Test-Path $venvPy)) {
+    $sysPy = (Get-Command python -ErrorAction SilentlyContinue).Source
+    if (-not $sysPy) {
+        Write-Warning 'Python 3 is not installed, so the theme was skipped. Install Python from python.org and run install.bat again.'
+        return
+    }
+    & $sysPy -m venv (Join-Path $here 'tools\venv')
+    & $venvPy -m pip install -q -r (Join-Path $here 'tools\requirements.txt')
+}
+& (Join-Path $here 'tools\theme.ps1') -TvHost $TvHost (Join-Path $here 'themes\frag')
+Write-Host 'Press Allow on the TV if it asks once more (the theme tool has its own key).'
 Write-Host 'When you are finished, switch USB debugging off on the TV to close port 5555.'

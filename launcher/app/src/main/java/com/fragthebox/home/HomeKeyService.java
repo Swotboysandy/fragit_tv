@@ -413,7 +413,7 @@ public class HomeKeyService extends AccessibilityService {
     }
 
     private void openHome() {
-        Intent open = stockHomeStays() ? new Intent(this, ConsoleActivity.class)
+        Intent open = stockHomeStays() ? new Intent(this, MainActivity.class)
                 : new Intent(Intent.ACTION_MAIN).setPackage(getPackageName());
         startActivity(open.addCategory(Intent.CATEGORY_HOME)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED));
