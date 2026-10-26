@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="console_in_progress">In progress</string>
+    <string name="console_resume">Resume</string>
+    <string name="console_inputs">Inputs</string>
+    <string name="console_music">Music</string>
+    <string name="console_notifications">Notifications</string>
+    <string name="console_home">Home</string>
+    <string name="console_apps">All apps</string>
+    <string name="console_network">Network</string>
+    <string name="console_power">Power</string>
+    <string name="console_power_menu">Restart or power off</string>
+    <string name="console_screensaver">Screensaver</string>
+    <string name="console_settings">TV settings</string>
+    <string name="console_live_tv">Live TV</string>
+</resources>

@@ -1,0 +1,10 @@
+# local builds and machine state
+launcher/.gradle/
+launcher/build/
+launcher/app/build/
+launcher/local.properties
+tools/venv/
+tools/adbkey/
+adb/
+backup/
+*.apk
