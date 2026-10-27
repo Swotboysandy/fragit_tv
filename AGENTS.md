@@ -66,6 +66,10 @@ The installer grants the overlay with `appops set com.fragthebox.home SYSTEM_ALE
 - What the TV **can't** do, already checked: apps can't change the panel backlight (no `com.realtek.menuslices`
   provider), so brightness is a software dim layer; TCL's own Picture menu is `com.tcl.settings/.MainActivity`.
   Netflix/Prime/YouTube publish **no** Watch Next rows here, so a "Continue watching" row would be empty.
+- Speed tweaks applied 27 Oct (not in the launcher, reapply after a factory reset): Android TV Settings and TCL
+  Settings compiled ahead of time (`cmd package compile -m speed -f com.android.tv.settings` / `com.tcl.settings`;
+  undo `cmd package compile --reset <pkg>`), and window/transition/animator animation scales set to 0.5
+  (`settings put global window_animation_scale 0.5` etc.; undo with 1.0). Settings opens in ~0.75 s (was ~1.05 s).
 - The firmware turns Google Assistant (`katniss`), the offline hotword, Ambient Mode, TTS and TalkBack back on
   at every boot; they are left on and kept out of `my-tv/debloat.txt`.
 
