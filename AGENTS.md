@@ -52,11 +52,12 @@ build outputs, `*.apk`.
 | OLED focus: `glass_style: "lift"`, no highlight, focused tile rises on a black shadow | `Config.java` (GLASS_LIFT), `GlassView.java` (draws nothing), `AppAdapter.java` (lift on focus and bind) |
 | Glass without white: brighter glass pane on focus, white text | `res/drawable/pill_bg.xml`, `input_row_bg.xml`, `pill_text*.xml` |
 | Brightness button (top bar): Auto by time of day, 100–20 %, TV picture settings; a dim overlay over every app | `Brightness.java`, `BrightnessService.java`, `BrightnessActivity.java`, `res/drawable/ic_brightness.xml`, `btnBrightness` in `activity_main.xml`, `MainActivity.java` |
+| Glass quick-settings panel from the ⚙ button: Network, Bluetooth (pair accessories), Brightness, Picture and backlight (TCL menu), Sound, Apps, Launcher settings, All TV settings, with live status | `QuickSettingsActivity.java`, `res/drawable/ic_bluetooth.xml`, `ic_sound.xml`, strings, `btnSettings` click in `MainActivity.java` |
 | Weather under the date from the network's public IP (ipwho.is + Open-Meteo, 30 min cache) | `Weather.java`, `weather` TextView in `activity_main.xml`, `MainActivity.java` (onCreate + onResume) |
 | Dark fades top and bottom so text and apps read on any picture | `res/drawable/top_fade.xml`, `bottom_fade.xml`, views in `activity_main.xml` |
 | App name | `res/values/strings.xml` (`app_name`) |
 
-Permissions added: `SYSTEM_ALERT_WINDOW` + `FOREGROUND_SERVICE` (brightness overlay), `INTERNET` (weather).
+Permissions added: `SYSTEM_ALERT_WINDOW` + `FOREGROUND_SERVICE` (brightness overlay), `INTERNET` (weather), `BLUETOOTH` (quick panel's on/off status).
 The installer grants the overlay with `appops set com.fragthebox.home SYSTEM_ALERT_WINDOW allow`.
 
 ## The owner's TV

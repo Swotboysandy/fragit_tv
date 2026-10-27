@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- frag weather line: the network's location (ipwho.is) and the weather there (Open-Meteo). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- frag quick settings: shows whether Bluetooth is on (state only, no scanning). -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at

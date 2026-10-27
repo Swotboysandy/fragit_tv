@@ -2,6 +2,18 @@
 <resources>
     <string name="app_name">Frag the Box</string>
     <string name="brightness">Brightness</string>
+    <string name="quick_bluetooth">Bluetooth</string>
+    <string name="quick_picture_sound">Picture and backlight</string>
+    <string name="quick_picture_sound_hint">The TV\'s own picture menu</string>
+    <string name="quick_sound">Sound</string>
+    <string name="quick_home_hint">Wallpaper, apps on Home</string>
+    <string name="quick_all_settings">All TV settings</string>
+    <string name="quick_on">On</string>
+    <string name="quick_connected">Connected</string>
+    <string name="quick_ethernet">Ethernet</string>
+    <string name="quick_not_connected">Not connected</string>
+    <string name="quick_off">Off</string>
+    <string name="quick_auto">Auto</string>
     <string name="brightness_auto">Auto (by time of day)</string>
     <string name="brightness_tv_picture">TV picture settings</string>
     <string name="inputs">Inputs</string>
