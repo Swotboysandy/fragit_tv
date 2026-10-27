@@ -20,6 +20,8 @@ the package `com.fragthebox.home`, with the owner's look on top:
   mark it with a `frag:` comment.
 - **The TV runs exactly one launcher:** `com.fragthebox.home`. Don't leave `com.gathin.tvhome` or any other
   launcher installed beside it.
+- **Dock glass is cleanyourtv's normal `dock_glass`.** The Apple-style and iOS Clear glass were tried and removed
+  on the owner's request (27 Oct); don't bring them back unless asked.
 - **Focus has no white:** no white rim, white slab or white pill on focus. Focus is the tile lifting on a deep
   shadow (`glass_style: lift`) and buttons/rows brightening as glass. Don't fade unfocused tiles.
 - **Disable, never uninstall** apps on the TV, and back up first (cleanyourtv's rules, below).
@@ -49,8 +51,6 @@ build outputs, `*.apk`.
 |---|---|
 | OLED focus: `glass_style: "lift"`, no highlight, focused tile rises on a black shadow | `Config.java` (GLASS_LIFT), `GlassView.java` (draws nothing), `AppAdapter.java` (lift on focus and bind) |
 | Glass without white: brighter glass pane on focus, white text | `res/drawable/pill_bg.xml`, `input_row_bg.xml`, `pill_text*.xml` |
-| Apple-style dock glass: milky pane, top sheen, light-catching rim | `DockDecoration.java` |
-| iOS "Clear" glass dock: wallpaper refracted at the rim with a colour fringe, **pre-rendered once per wallpaper** (Android 9 has no live shaders) | `ClearGlass.java`, hooks in `WallpaperPlayer.java` (half-size software copy) and `DockDecoration.java` |
 | Brightness button (top bar): Auto by time of day, 100–20 %, TV picture settings; a dim overlay over every app | `Brightness.java`, `BrightnessService.java`, `BrightnessActivity.java`, `res/drawable/ic_brightness.xml`, `btnBrightness` in `activity_main.xml`, `MainActivity.java` |
 | Weather under the date from the network's public IP (ipwho.is + Open-Meteo, 30 min cache) | `Weather.java`, `weather` TextView in `activity_main.xml`, `MainActivity.java` (onCreate + onResume) |
 | Dark fades top and bottom so text and apps read on any picture | `res/drawable/top_fade.xml`, `bottom_fade.xml`, views in `activity_main.xml` |

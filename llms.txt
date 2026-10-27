@@ -1,6 +1,6 @@
 # fragit_tv
 
-> The owner's Android TV home screen: cleanyourtv's launcher (renamed com.fragthebox.home) styled through its own theme system, plus a few small marked additions (OLED lift focus, iOS Clear glass dock, brightness button, weather, fades). One-click Windows installer over Wi-Fi ADB; no root, apps disabled never uninstalled.
+> The owner's Android TV home screen: cleanyourtv's launcher (renamed com.fragthebox.home) styled through its own theme system, plus a few small marked additions (OLED lift focus, brightness button, weather, fades). One-click Windows installer over Wi-Fi ADB; no root, apps disabled never uninstalled.
 
 ## For agents
 - [AGENTS.md](AGENTS.md): rules, repo map, the frag additions with file paths, the owner's TV, build/install/release steps

@@ -48,8 +48,6 @@ final class WallpaperPlayer {
     private final int dimColor;
     /** The picture on screen, released once the next one has been drawn. */
     private Bitmap current;
-    /** frag Clear glass: a half-size software copy of each decoded picture, published when it is shown. */
-    private final java.util.Map<Bitmap, Bitmap> lensSources = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private boolean active;
     private boolean closed;
     private boolean loading;
@@ -268,13 +266,6 @@ final class WallpaperPlayer {
         // The wallpaper covers the whole root; avoid drawing the fallback colour under it.
         root.setBackground(null);
         image.setImageBitmap(bitmap);
-        Bitmap lens = lensSources.remove(bitmap);
-        if (lens != null) {
-            ClearGlass.setSource(lens, bitmap.getWidth(), bitmap.getHeight());
-            root.invalidate();
-            View grid = root.findViewById(R.id.grid);
-            if (grid != null) grid.invalidate();
-        }
         if (old != null && old != bitmap) image.postDelayed(old::recycle, 500);
     }
 
@@ -300,17 +291,11 @@ final class WallpaperPlayer {
             Bitmap decoded = BitmapFactory.decodeFile(file.getPath(), options);
             if (decoded == null) return null;
             if (dimColor != 0) new Canvas(decoded).drawColor(dimColor);
-            Bitmap half = Bitmap.createScaledBitmap(decoded, Math.max(1, decoded.getWidth() / 2),
-                    Math.max(1, decoded.getHeight() / 2), true);
             // One copy in GPU memory instead of a software bitmap plus its texture; the decode stays off the UI
             // thread for rotations, and Home's return no longer uploads 4-8 MB to the GPU.
             Bitmap gpu = decoded.copy(Bitmap.Config.HARDWARE, false);
-            if (gpu == null) {
-                lensSources.put(decoded, half);
-                return decoded;
-            }
+            if (gpu == null) return decoded;
             decoded.recycle();
-            lensSources.put(gpu, half);
             return gpu;
         } catch (Exception | OutOfMemoryError failure) {
             return null;

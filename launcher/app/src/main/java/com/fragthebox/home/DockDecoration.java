@@ -18,13 +18,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final float density;
     private final Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
-    /** frag Clear glass: the pre-rendered lens image, drawn through this paint. */
-    private final Paint lens = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final android.graphics.Matrix lensMatrix = new android.graphics.Matrix();
-    private final int[] loc = new int[2];
-    private android.graphics.Bitmap lensBitmap;
 
     /** Extra band below the tiles for their names (always_show_names), in px. */
     private final float namesRoom;
@@ -146,50 +140,13 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         }
         rect.bottom += namesRoom;
         if (lightGlass && (rect.top != shaderTop || rect.bottom != shaderBottom)) {
-            // frag: Apple-style glass. A milky pane, brighter at the top; a sheen over the upper part; and a rim
-            // that catches the light along the top edge and fades toward the bottom.
-            band.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x3DFFFFFF, 0x17FFFFFF,
-                    Shader.TileMode.CLAMP));
-            sheen.setShader(new LinearGradient(0, rect.top, 0, rect.top + rect.height() * 0.5f, 0x24FFFFFF, 0x00FFFFFF,
-                    Shader.TileMode.CLAMP));
-            edge.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x99FFFFFF, 0x1FFFFFFF,
+            // The pills' glass (pill_bg: white, 18% fading to 8%), a little fainter over this much larger area.
+            band.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x24FFFFFF, 0x0DFFFFFF,
                     Shader.TileMode.CLAMP));
             shaderTop = rect.top;
             shaderBottom = rect.bottom;
         }
-        android.graphics.Bitmap clear = null;
-        if (lightGlass) {
-            // iOS Clear glass: the picture behind the band, bent at the rim (ClearGlass, rendered once).
-            parent.getLocationInWindow(loc);
-            RectF onScreen = new RectF(rect);
-            onScreen.offset(loc[0], loc[1]);
-            android.util.DisplayMetrics dm = parent.getResources().getDisplayMetrics();
-            clear = ClearGlass.render(onScreen, radius, parent.getRootView().getWidth() > 0 ? parent.getRootView().getWidth() : dm.widthPixels,
-                    parent.getRootView().getHeight() > 0 ? parent.getRootView().getHeight() : dm.heightPixels, density);
-        }
-        if (clear != null) {
-            if (clear != lensBitmap) {
-                lensBitmap = clear;
-                lens.setShader(new android.graphics.BitmapShader(clear, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
-            }
-            lensMatrix.setScale(rect.width() / clear.getWidth(), rect.height() / clear.getHeight());
-            lensMatrix.postTranslate(rect.left, rect.top);
-            lens.getShader().setLocalMatrix(lensMatrix);
-            c.drawRoundRect(rect, radius, radius, lens);
-            // A breath of white so the glass reads as a surface, far lighter than the frosted pane.
-            int keep = band.getAlpha();
-            band.setAlpha(Math.round(keep * 0.35f));
-            c.drawRoundRect(rect, radius, radius, band);
-            band.setAlpha(keep);
-        } else {
-            c.drawRoundRect(rect, radius, radius, band);
-        }
-        if (lightGlass) {
-            c.save();
-            c.clipRect(rect.left, rect.top, rect.right, rect.top + rect.height() * 0.5f);
-            c.drawRoundRect(rect, radius, radius, sheen);
-            c.restore();
-        }
+        c.drawRoundRect(rect, radius, radius, band);
         c.drawRoundRect(rect, radius, radius, edge);
     }
 }
