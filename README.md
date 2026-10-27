@@ -67,6 +67,10 @@ Both remember the TV's IP in `tv-ip.txt` and need USB debugging on.
 `tools\disable.ps1 -TvHost <ip> examples\<your-tv>\debloat.txt`. Everything is disabled, never uninstalled;
 `tools\restore.ps1` with the same list undoes it.
 
+## For AI coding agents
+
+Read [AGENTS.md](AGENTS.md) first (Claude Code and Gemini CLI load it through `CLAUDE.md` / `GEMINI.md`); [llms.txt](llms.txt) is the short index.
+
 ## Credits
 
 Launcher, tools and TV lists: [cleanyourtv](https://github.com/Gathin23/cleanyourtv) by Gathin (MIT, see

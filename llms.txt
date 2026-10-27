@@ -1,0 +1,18 @@
+# fragit_tv
+
+> The owner's Android TV home screen: cleanyourtv's launcher (renamed com.fragthebox.home) styled through its own theme system, plus a few small marked additions (OLED lift focus, iOS Clear glass dock, brightness button, weather, fades). One-click Windows installer over Wi-Fi ADB; no root, apps disabled never uninstalled.
+
+## For agents
+- [AGENTS.md](AGENTS.md): rules, repo map, the frag additions with file paths, the owner's TV, build/install/release steps
+- [README.md](README.md): what it looks like, install, one-click checks
+
+## The style
+- [themes/frag/config.json](themes/frag/config.json): the theme (keys documented in cleanyourtv's themes/README.md)
+- [themes/frag/CREDITS.md](themes/frag/CREDITS.md): wallpaper credits
+
+## The TV
+- [my-tv/debloat.txt](my-tv/debloat.txt): apps switched off on the owner's TV
+- [examples/tcl-uniontv-latin-america/debloat.txt](examples/tcl-uniontv-latin-america/debloat.txt): the tested list it came from
+
+## Upstream
+- [cleanyourtv](https://github.com/Gathin23/cleanyourtv): the launcher, tools and TV lists (MIT)
